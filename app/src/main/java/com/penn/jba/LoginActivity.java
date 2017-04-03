@@ -1,138 +1,124 @@
 package com.penn.jba;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.annotation.TargetApi;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.support.annotation.NonNull;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.ActionBarActivity;
+import android.databinding.DataBindingUtil;
 import android.support.v7.app.AppCompatActivity;
-import android.app.LoaderManager.LoaderCallbacks;
 
-import android.content.CursorLoader;
-import android.content.Loader;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.AsyncTask;
 
 import android.os.Build;
 import android.os.Bundle;
-import android.provider.ContactsContract;
+import android.text.Editable;
 import android.text.TextUtils;
-import android.util.Log;
+import android.text.TextWatcher;
 import android.view.KeyEvent;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.inputmethod.EditorInfo;
-import android.widget.ArrayAdapter;
-import android.widget.AutoCompleteTextView;
-import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.regex.Pattern;
+import com.penn.jba.databinding.ActivityLoginBinding;
 
-import static android.Manifest.permission.READ_CONTACTS;
+import static com.penn.jba.util.PPHelper.isPasswordValid;
+import static com.penn.jba.util.PPHelper.isPhoneValid;
 
-/**
- * A login screen that offers login via email/password.
- */
-public class LoginActivity extends AppCompatActivity {
-
-    /**
-     * A dummy authentication store containing known user names and passwords.
-     * TODO: remove after connecting to a real authentication system.
-     */
-    private static final String[] DUMMY_CREDENTIALS = new String[]{
-            "foo@example.com:hello", "bar@example.com:world"
-    };
-    /**
-     * Keep track of the login task to ensure we can cancel it if requested.
-     */
+public class LoginActivity extends AppCompatActivity implements TextWatcher {
     private UserLoginTask mAuthTask = null;
 
-    // UI references.
-    private EditText mPhoneView;
-    private EditText mPasswordView;
-    private View mProgressView;
-    private Button mSignInButton;
-    private Button mForgetPasswordButton;
-    private Button mCreateNewAccountButton;
+    private ActivityLoginBinding binding;
+
+    private boolean jobProcess = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_login);
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_login);
+        binding.setPresenter(this);
 
-        // Set up the login form.
-        mPhoneView = (EditText) findViewById(R.id.phone);
-
-        mPasswordView = (EditText) findViewById(R.id.password);
-        mPasswordView.setOnEditorActionListener(new TextView.OnEditorActionListener() {
+        //设置键盘返回键的快捷方式
+        binding.passwordInput.setOnEditorActionListener(new TextView.OnEditorActionListener() {
             @Override
             public boolean onEditorAction(TextView textView, int id, KeyEvent keyEvent) {
-                if (id == R.id.login || id == EditorInfo.IME_NULL) {
-                    attemptLogin();
+                if (id == R.id.sign_in_ime || id == EditorInfo.IME_NULL) {
+                    signIn();
                     return true;
                 }
                 return false;
             }
         });
 
-        mSignInButton = (Button) findViewById(R.id.sign_in_button);
-        mSignInButton.setOnClickListener(new OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                attemptLogin();
-            }
-        });
+        binding.phoneInput.addTextChangedListener(this);
 
-        mProgressView = findViewById(R.id.login_progress);
+        binding.passwordInput.addTextChangedListener(this);
 
-        mForgetPasswordButton = (Button) findViewById(R.id.forget_password);
-        mCreateNewAccountButton = (Button) findViewById(R.id.create_new_account);
+        setOperationEnableState();
     }
 
-    /**
-     * Attempts to sign in or register the account specified by the login form.
-     * If there are form errors (invalid email, missing fields, etc.), the
-     * errors are presented and no actual login attempt is made.
-     */
-    private void attemptLogin() {
+    @Override
+    protected void onNewIntent(Intent intent) {
+        if (intent.getBooleanExtra("needAutoLogin", false)) {
+            Intent intent1 = new Intent(this, TabsActivity.class);
+            startActivity(intent1);
+        } else {
+
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        if (mAuthTask != null) {
+            mAuthTask.cancel(true);
+        }
+        super.onDestroy();
+    }
+
+    @Override
+    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+
+    }
+
+    @Override
+    public void onTextChanged(CharSequence s, int start, int before, int count) {
+
+    }
+
+    @Override
+    public void afterTextChanged(Editable s) {
+        setOperationEnableState();
+    }
+
+    //-----UI event handler-----
+    public void signIn() {
         if (mAuthTask != null) {
             return;
         }
 
         // Reset errors.
-        mPhoneView.setError(null);
-        mPasswordView.setError(null);
+        binding.phoneInput.setError(null);
+        binding.passwordInput.setError(null);
 
         // Store values at the time of the login attempt.
-        String phone = mPhoneView.getText().toString();
-        String password = mPasswordView.getText().toString();
+        String phone = binding.phoneInput.getText().toString();
+        String password = binding.passwordInput.getText().toString();
 
         boolean cancel = false;
         View focusView = null;
 
-        // Check for a valid password.
-        if (TextUtils.isEmpty(password) || !isPasswordValid(password)) {
-            mPasswordView.setError(getString(R.string.error_invalid_password));
-            focusView = mPasswordView;
+        // Check for a valid phone.
+        if (TextUtils.isEmpty(phone)) {
+            binding.phoneInput.setError(getString(R.string.error_field_required));
+            focusView = (focusView == null ? binding.phoneInput : focusView);
+            cancel = true;
+        } else if (!isPhoneValid(phone)) {
+            binding.phoneInput.setError(getString(R.string.error_invalid_phone));
+            focusView = (focusView == null ? binding.phoneInput : focusView);
             cancel = true;
         }
 
-        // Check for a valid phone.
-        if (TextUtils.isEmpty(phone)) {
-            mPhoneView.setError(getString(R.string.error_field_required));
-            focusView = mPhoneView;
-            cancel = true;
-        } else if (!isPhoneValid(phone)) {
-            mPhoneView.setError(getString(R.string.error_invalid_phone));
-            focusView = mPhoneView;
+        // Check for a valid password.
+        if (TextUtils.isEmpty(password) || !isPasswordValid(password)) {
+            binding.passwordInput.setError(getString(R.string.error_invalid_password));
+            focusView = (focusView == null ? binding.passwordInput : focusView);
             cancel = true;
         }
 
@@ -149,36 +135,25 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private boolean isPhoneValid(String phone) {
-        return Pattern.matches("\\d{11}", phone);
+    public void goForgetPassword() {
+        Intent intent = new Intent(this, ForgetPasswordActivity.class);
+        startActivity(intent);
     }
 
-    private boolean isPasswordValid(String password) {
-        Log.v("ppLog", password + "," + password.length());
-        return password.length() >= 6;
+    public void goSignUp() {
+        Intent intent = new Intent(this, SignUp1Activity.class);
+        startActivity(intent);
     }
 
-    //pptodo TargetApi有何用
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
-    private void showProgress(final boolean show) {
-        mProgressView.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        mSignInButton.setEnabled(show ? false : true);
-        mForgetPasswordButton.setEnabled(show ? false : true);
-        mCreateNewAccountButton.setEnabled(show ? false : true);
-    }
-
-    /**
-     * Represents an asynchronous login/registration task used to authenticate
-     * the user.
-     */
+    //-----helper-----
     public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
 
-        private final String mEmail;
-        private final String mPassword;
+        private final String phone;
+        private final String password;
 
-        UserLoginTask(String email, String password) {
-            mEmail = email;
-            mPassword = password;
+        UserLoginTask(String phone, String password) {
+            this.phone = phone;
+            this.password = password;
         }
 
         @Override
@@ -187,17 +162,9 @@ public class LoginActivity extends AppCompatActivity {
 
             try {
                 // Simulate network access.
-                Thread.sleep(2000);
+                Thread.sleep(5000);
             } catch (InterruptedException e) {
                 return false;
-            }
-
-            for (String credential : DUMMY_CREDENTIALS) {
-                String[] pieces = credential.split(":");
-                if (pieces[0].equals(mEmail)) {
-                    // Account exists, return true if the password matches.
-                    return pieces[1].equals(mPassword);
-                }
             }
 
             // TODO: register the new account here.
@@ -212,8 +179,8 @@ public class LoginActivity extends AppCompatActivity {
             if (success) {
                 //finish();
             } else {
-                mPasswordView.setError(getString(R.string.error_incorrect_password));
-                mPasswordView.requestFocus();
+                binding.passwordInput.setError(getString(R.string.error_incorrect_password));
+                binding.passwordInput.requestFocus();
             }
         }
 
@@ -224,20 +191,53 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    public void goForgetPassword(View view) {
-        Intent intent = new Intent(this, ForgetPasswordActivity.class);
-        startActivity(intent);
+    //pptodo TargetApi有何用
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
+    private void showProgress(final boolean show) {
+        jobProcess = (show ? true : false);
+        setOperationEnableState();
+        binding.loginProgress.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
     }
 
-    @Override
-    protected void onNewIntent(Intent intent) {
-        if (intent.getBooleanExtra("needAutoLogin", false)) {
-            Intent intent1 = new Intent(this, TabsActivity.class);
-            startActivity(intent1);
-        }
-        else {
+    //设置可操作控件可用状态
+    private void setOperationEnableState() {
+        setSignInButtonEnableState();
+        setGoForgetPasswordButtonEnableState();
+        setGoSignUpButtonEnableState();
+    }
 
+    private void setSignInButtonEnableState() {
+        boolean enable = true;
+
+        if (jobProcess) {
+            enable = false;
+        } else if (TextUtils.isEmpty(binding.phoneInput.getText())) {
+            enable = false;
+        } else if (TextUtils.isEmpty(binding.passwordInput.getText())) {
+            enable = false;
         }
+
+        binding.signInButton.setEnabled(enable);
+    }
+
+    private void setGoForgetPasswordButtonEnableState() {
+        boolean enable = true;
+
+        if (jobProcess) {
+            enable = false;
+        }
+
+        binding.forgetPasswordButton.setEnabled(enable);
+    }
+
+    private void setGoSignUpButtonEnableState() {
+        boolean enable = true;
+
+        if (jobProcess) {
+            enable = false;
+        }
+
+        binding.createNewAccountButton.setEnabled(enable);
     }
 }
 

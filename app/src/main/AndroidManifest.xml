@@ -17,27 +17,32 @@
         <activity
             android:name=".LoginActivity"
             android:label="@string/login"
-            android:launchMode="singleTask"></activity>
+            android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
         <activity
             android:name=".ForgetPasswordActivity"
+            android:parentActivityName=".LoginActivity"
             android:label="@string/reset_password" />
         <activity
             android:name=".TabsActivity"
             android:label="@string/title_activity_tabs" />
         <activity
             android:name=".SignUp1Activity"
+            android:parentActivityName=".LoginActivity"
             android:label="@string/action_sign_up"></activity>
         <activity
             android:name=".SignUp2Activity"
+            android:parentActivityName=".SignUp1Activity"
             android:label="@string/action_sign_up"></activity>
         <activity
             android:name=".SignUp3Activity"
+            android:parentActivityName=".SignUp2Activity"
             android:label="@string/finish_sign_up">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
         </activity>
     </application>
 

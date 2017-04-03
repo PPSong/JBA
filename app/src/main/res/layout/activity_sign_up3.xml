@@ -16,7 +16,7 @@
         android:layout_height="wrap_content">
 
         <EditText
-            android:id="@+id/password"
+            android:id="@+id/password_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/set_password"
@@ -37,12 +37,12 @@
             android:layout_marginRight="8dp"
             android:layout_marginTop="8dp"
             app:layout_constraintLeft_toLeftOf="parent"
-            app:layout_constraintRight_toLeftOf="@+id/get_random_nickname"
+            app:layout_constraintRight_toLeftOf="@+id/get_random_nickname_input"
             app:layout_constraintTop_toTopOf="parent"
             android:layout_marginEnd="8dp">
 
             <EditText
-                android:id="@+id/nickname"
+                android:id="@+id/nickname_input"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:hint="@string/input_nickname"
@@ -52,7 +52,7 @@
         </android.support.design.widget.TextInputLayout>
 
         <Button
-            android:id="@+id/get_random_nickname"
+            android:id="@+id/get_random_nickname_input"
             style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -71,7 +71,7 @@
         android:layout_marginTop="8dp">
 
         <EditText
-            android:id="@+id/birthday"
+            android:id="@+id/birthday_input"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:hint="@string/pick_birthday" />
@@ -85,7 +85,7 @@
 
         <RadioGroup
             android:orientation="horizontal"
-            android:id="@+id/sex"
+            android:id="@+id/sex_radio_group"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             app:layout_constraintTop_toTopOf="parent"
@@ -94,14 +94,14 @@
             app:layout_constraintLeft_toLeftOf="parent">
 
             <RadioButton
-                android:id="@+id/radioMale"
+                android:id="@+id/male_radio"
                 android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:onClick="chooseMale"
                 android:text="@string/male" />
 
             <RadioButton
-                android:id="@+id/radioFemale"
+                android:id="@+id/female_radio"
                 android:layout_width="100dp"
                 android:layout_height="wrap_content"
                 android:onClick="chooseFemale"
@@ -110,7 +110,7 @@
         </RadioGroup>
 
         <TextView
-            android:id="@+id/sex_error"
+            android:id="@+id/sex_error_display"
             android:layout_width="100dp"
             android:layout_height="match_parent"
             android:layout_marginRight="8dp"

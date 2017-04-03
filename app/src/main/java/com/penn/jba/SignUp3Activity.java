@@ -1,6 +1,5 @@
 package com.penn.jba;
 
-import android.app.AlertDialog;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
 
@@ -72,11 +71,11 @@ public class SignUp3Activity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_sign_up3);
 
-        mPassword = (EditText) findViewById(R.id.password);
+        mPassword = (EditText) findViewById(R.id.password_input);
 
-        mNickname = (EditText) findViewById(R.id.nickname);
+        mNickname = (EditText) findViewById(R.id.nickname_input);
 
-        mBirthday = (EditText) findViewById(R.id.birthday);
+        mBirthday = (EditText) findViewById(R.id.birthday_input);
 
         mBirthday.setOnFocusChangeListener(new View.OnFocusChangeListener() {
             @Override
@@ -95,7 +94,7 @@ public class SignUp3Activity extends AppCompatActivity {
         mProgressView = findViewById(R.id.sign_up_progress);
         mSignUpButton = (Button) findViewById(R.id.sign_up_button);
 
-        mSexError = (TextView) findViewById(R.id.sex_error);
+        mSexError = (TextView) findViewById(R.id.sex_error_display);
     }
 
     public void chooseMale(View v) {
