@@ -1,33 +1,46 @@
 package com.penn.jba;
 
-import android.annotation.TargetApi;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.support.v7.app.AppCompatActivity;
-
-import android.os.AsyncTask;
-
-import android.os.Build;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
 import android.widget.TextView;
+import android.widget.Toast;
 
+import com.jakewharton.rxbinding2.view.RxView;
+import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.penn.jba.databinding.ActivityLoginBinding;
+import com.penn.jba.util.PPHelper;
+import com.penn.jba.util.PPJSONObject;
+import com.penn.jba.util.PPRetrofit;
+import com.penn.jba.util.PPWarn;
 
-import static com.penn.jba.util.PPHelper.isPasswordValid;
-import static com.penn.jba.util.PPHelper.isPhoneValid;
+import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
+import java.util.regex.Pattern;
 
-public class LoginActivity extends AppCompatActivity implements TextWatcher {
-    private UserLoginTask mAuthTask = null;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.functions.Function3;
+import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.BehaviorSubject;
 
+public class LoginActivity extends AppCompatActivity {
     private ActivityLoginBinding binding;
 
     private boolean jobProcess = false;
+
+    private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
+
+    private BehaviorSubject<Boolean> jobProcessing = BehaviorSubject.<Boolean>create();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,12 +59,6 @@ public class LoginActivity extends AppCompatActivity implements TextWatcher {
                 return false;
             }
         });
-
-        binding.phoneInput.addTextChangedListener(this);
-
-        binding.passwordInput.addTextChangedListener(this);
-
-        setOperationEnableState();
     }
 
     @Override
@@ -65,76 +72,156 @@ public class LoginActivity extends AppCompatActivity implements TextWatcher {
     }
 
     @Override
-    protected void onDestroy() {
-        if (mAuthTask != null) {
-            mAuthTask.cancel(true);
+    protected void onStart() {
+        super.onStart();
+
+        jobProcessing.onNext(false);
+
+        Observable<String> phoneInputObervable = RxTextView.textChanges(binding.phoneInput)
+                .skip(1)
+                .map(new Function<CharSequence, String>() {
+                    @Override
+                    public String apply(CharSequence charSequence) throws Exception {
+                        String error = "";
+                        if (TextUtils.isEmpty(charSequence)) {
+                            error = getString(R.string.error_field_required);
+                        } else if (!Pattern.matches("\\d{11}", charSequence.toString())) {
+                            error = getString(R.string.error_invalid_phone);
+                        }
+                        return error;
+                    }
+                }).doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.phoneInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        Observable<String> passwordInputObervable = RxTextView.textChanges(binding.passwordInput)
+                .skip(1)
+                .map(new Function<CharSequence, String>() {
+                    @Override
+                    public String apply(CharSequence charSequence) throws Exception {
+                        String error = "";
+                        if (TextUtils.isEmpty(charSequence)) {
+                            error = getString(R.string.error_field_required);
+                        } else if (!Pattern.matches("\\w{6,12}", charSequence.toString())) {
+                            error = getString(R.string.error_invalid_password);
+                        }
+                        return error;
+                    }
+                }).doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.passwordInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+        ;
+
+        Observable<Object> signInButtonObervable = RxView.clicks(binding.signInButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(Observable.combineLatest(
+                phoneInputObervable,
+                passwordInputObervable,
+                jobProcessing,
+                new Function3<String, String, Boolean, Boolean>() {
+                    @Override
+                    public Boolean apply(String s, String s2, Boolean aBoolean) throws Exception {
+                        Log.v("ppLog", "test:" + (TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && !aBoolean));
+                        return TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && !aBoolean;
+                    }
+                }
+                )
+                        .distinctUntilChanged()
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(new Consumer<Boolean>() {
+                            @Override
+                            public void accept(Boolean aBoolean) throws Exception {
+                                binding.signInButton.setEnabled(aBoolean);
+                            }
+                        })
+        );
+
+        disposableList.add(signInButtonObervable
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                signIn();
+                            }
+                        }
+                )
+        );
+
+        disposableList.add(jobProcessing
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<Boolean>() {
+                            @Override
+                            public void accept(Boolean aBoolean) throws Exception {
+                                binding.forgetPasswordButton.setEnabled(!aBoolean);
+                                binding.createNewAccountButton.setEnabled(!aBoolean);
+                                binding.loginProgress.setVisibility(aBoolean ? View.VISIBLE : View.INVISIBLE);
+                            }
+                        }
+                )
+        );
+    }
+
+    private void signIn() {
+        jobProcessing.onNext(true);
+        PPJSONObject jBody = new PPJSONObject();
+        jBody
+                .put("phone", binding.phoneInput.getText().toString())
+                .put("pwd", binding.passwordInput.getText().toString());
+
+        final Observable<String> loginResult = PPRetrofit.getInstance().api("user.login", jBody.getJSONObject());
+        loginResult.subscribeOn(Schedulers.newThread())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<String>() {
+                            public void accept(String s) {
+                                Log.v("ppLog", "get result:" + s);
+                                jobProcessing.onNext(false);
+
+                                PPWarn ppWarn = PPHelper.ppWarning(s);
+                                if (ppWarn != null) {
+                                    Toast.makeText(LoginActivity.this, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        },
+                        new Consumer<Throwable>() {
+                            public void accept(Throwable t1) {
+                                jobProcessing.onNext(false);
+
+                                Toast.makeText(LoginActivity.this, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Log.v("ppLog", "error:" + t1.toString());
+                                t1.printStackTrace();
+                            }
+                        }
+                );
+    }
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+        for (Disposable d : disposableList) {
+            if (!d.isDisposed()) {
+                d.dispose();
+            }
         }
+    }
+
+    @Override
+    protected void onDestroy() {
         super.onDestroy();
     }
 
-    @Override
-    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
-    }
-
-    @Override
-    public void onTextChanged(CharSequence s, int start, int before, int count) {
-
-    }
-
-    @Override
-    public void afterTextChanged(Editable s) {
-        setOperationEnableState();
-    }
-
     //-----UI event handler-----
-    public void signIn() {
-        if (mAuthTask != null) {
-            return;
-        }
-
-        // Reset errors.
-        binding.phoneInput.setError(null);
-        binding.passwordInput.setError(null);
-
-        // Store values at the time of the login attempt.
-        String phone = binding.phoneInput.getText().toString();
-        String password = binding.passwordInput.getText().toString();
-
-        boolean cancel = false;
-        View focusView = null;
-
-        // Check for a valid phone.
-        if (TextUtils.isEmpty(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_field_required));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        } else if (!isPhoneValid(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_invalid_phone));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        }
-
-        // Check for a valid password.
-        if (TextUtils.isEmpty(password) || !isPasswordValid(password)) {
-            binding.passwordInput.setError(getString(R.string.error_invalid_password));
-            focusView = (focusView == null ? binding.passwordInput : focusView);
-            cancel = true;
-        }
-
-        if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
-            focusView.requestFocus();
-        } else {
-            // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
-            showProgress(true);
-            mAuthTask = new UserLoginTask(phone, password);
-            mAuthTask.execute((Void) null);
-        }
-    }
-
     public void goForgetPassword() {
         Intent intent = new Intent(this, ForgetPasswordActivity.class);
         startActivity(intent);
@@ -146,98 +233,5 @@ public class LoginActivity extends AppCompatActivity implements TextWatcher {
     }
 
     //-----helper-----
-    public class UserLoginTask extends AsyncTask<Void, Void, Boolean> {
-
-        private final String phone;
-        private final String password;
-
-        UserLoginTask(String phone, String password) {
-            this.phone = phone;
-            this.password = password;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
-
-            try {
-                // Simulate network access.
-                Thread.sleep(5000);
-            } catch (InterruptedException e) {
-                return false;
-            }
-
-            // TODO: register the new account here.
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(final Boolean success) {
-            mAuthTask = null;
-            showProgress(false);
-
-            if (success) {
-                //finish();
-            } else {
-                binding.passwordInput.setError(getString(R.string.error_incorrect_password));
-                binding.passwordInput.requestFocus();
-            }
-        }
-
-        @Override
-        protected void onCancelled() {
-            mAuthTask = null;
-            showProgress(false);
-        }
-    }
-
-    //pptodo TargetApi有何用
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
-    private void showProgress(final boolean show) {
-        jobProcess = (show ? true : false);
-        setOperationEnableState();
-        binding.loginProgress.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-    }
-
-    //设置可操作控件可用状态
-    private void setOperationEnableState() {
-        setSignInButtonEnableState();
-        setGoForgetPasswordButtonEnableState();
-        setGoSignUpButtonEnableState();
-    }
-
-    private void setSignInButtonEnableState() {
-        boolean enable = true;
-
-        if (jobProcess) {
-            enable = false;
-        } else if (TextUtils.isEmpty(binding.phoneInput.getText())) {
-            enable = false;
-        } else if (TextUtils.isEmpty(binding.passwordInput.getText())) {
-            enable = false;
-        }
-
-        binding.signInButton.setEnabled(enable);
-    }
-
-    private void setGoForgetPasswordButtonEnableState() {
-        boolean enable = true;
-
-        if (jobProcess) {
-            enable = false;
-        }
-
-        binding.forgetPasswordButton.setEnabled(enable);
-    }
-
-    private void setGoSignUpButtonEnableState() {
-        boolean enable = true;
-
-        if (jobProcess) {
-            enable = false;
-        }
-
-        binding.createNewAccountButton.setEnabled(enable);
-    }
 }
 

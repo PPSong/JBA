@@ -7,7 +7,7 @@
     <string name="action_sign_in">登录</string>
     <string name="action_sign_in_short">登录</string>
     <string name="error_invalid_phone">手机号码格式不正确</string>
-    <string name="error_invalid_password">密码至少6位</string>
+    <string name="error_invalid_password">密码至少6位,最多12位</string>
     <string name="error_incorrect_password">密码错误</string>
     <string name="error_field_required">此项必填</string>
     <string name="permission_rationale">"Contacts permissions are needed for providing email
