@@ -26,24 +26,25 @@
         </activity>
         <activity
             android:name=".ForgetPasswordActivity"
-            android:parentActivityName=".LoginActivity"
-            android:label="@string/reset_password" />
+            android:label="@string/reset_password"
+            android:parentActivityName=".LoginActivity" />
         <activity
             android:name=".TabsActivity"
             android:label="@string/title_activity_tabs" />
         <activity
             android:name=".SignUp1Activity"
-            android:parentActivityName=".LoginActivity"
-            android:label="@string/action_sign_up"></activity>
+            android:label="@string/action_sign_up"
+            android:launchMode="singleTask"
+            android:parentActivityName=".LoginActivity"></activity>
         <activity
             android:name=".SignUp2Activity"
-            android:parentActivityName=".SignUp1Activity"
-            android:label="@string/action_sign_up"></activity>
+            android:label="@string/action_sign_up"
+            android:launchMode="singleTask"
+            android:parentActivityName=".SignUp1Activity"></activity>
         <activity
             android:name=".SignUp3Activity"
-            android:parentActivityName=".SignUp2Activity"
-            android:label="@string/finish_sign_up">
-        </activity>
+            android:label="@string/finish_sign_up"
+            android:parentActivityName=".SignUp2Activity"></activity>
     </application>
 
 </manifest>

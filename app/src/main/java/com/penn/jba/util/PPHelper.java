@@ -17,7 +17,7 @@ import java.util.regex.Pattern;
 
 public class PPHelper {
     //秒
-    public static final int REQUEST_VERIFY_CODE_INTERVAL = 20;
+    public static final int REQUEST_VERIFY_CODE_INTERVAL = 5;
 
     public static String isPhoneValid(Context context, String phone) {
         String error = "";
@@ -42,7 +42,7 @@ public class PPHelper {
     }
 
 
-    public static String isVerfifyCodeValid(Context context, String verifyCode) {
+    public static String isVerifyCodeValid(Context context, String verifyCode) {
         String error = "";
         if (TextUtils.isEmpty(verifyCode)) {
             error = context.getString(R.string.error_field_required);

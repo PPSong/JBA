@@ -1,5 +1,6 @@
 package com.penn.jba;
 
+import android.content.Context;
 import android.databinding.DataBindingUtil;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
@@ -35,6 +36,8 @@ import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 
 public class ForgetPasswordActivity extends AppCompatActivity {
+    private Context activityContext;
+    
     private ActivityForgetPasswordBinding binding;
 
     private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
@@ -58,6 +61,9 @@ public class ForgetPasswordActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        activityContext = this;
+        
         binding = DataBindingUtil.setContentView(this, R.layout.activity_forget_password);
         binding.setPresenter(this);
 
@@ -86,7 +92,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         }
     }
 
-    protected void setup() {
+    private void setup() {
         //先发送个初始事件,便于判断按钮是否可用
         jobProcessing.onNext(false);
         timeLeftProcessing.onNext(false);
@@ -98,7 +104,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                         new Function<CharSequence, String>() {
                             @Override
                             public String apply(CharSequence charSequence) throws Exception {
-                                return PPHelper.isPhoneValid(ForgetPasswordActivity.this, charSequence.toString());
+                                return PPHelper.isPhoneValid(activityContext, charSequence.toString());
                             }
                         }
                 )
@@ -145,7 +151,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                         new Function<CharSequence, String>() {
                             @Override
                             public String apply(CharSequence charSequence) throws Exception {
-                                return PPHelper.isVerfifyCodeValid(ForgetPasswordActivity.this, charSequence.toString());
+                                return PPHelper.isVerifyCodeValid(activityContext, charSequence.toString());
                             }
                         }
                 )
@@ -165,7 +171,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                         new Function<CharSequence, String>() {
                             @Override
                             public String apply(CharSequence charSequence) throws Exception {
-                                return PPHelper.isPasswordValid(ForgetPasswordActivity.this, charSequence.toString());
+                                return PPHelper.isPasswordValid(activityContext, charSequence.toString());
                             }
                         }
                 )
@@ -221,7 +227,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                             @Override
                             public boolean test(Long aLong) throws Exception {
                                 Log.v("ppLog", "takeWhile");
-                                boolean b = (System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this) <= PPHelper.REQUEST_VERIFY_CODE_INTERVAL;
+                                boolean b = (System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(activityContext) <= PPHelper.REQUEST_VERIFY_CODE_INTERVAL;
                                 return b;
                             }
                         }
@@ -231,7 +237,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                             @Override
                             public Long apply(Long aLong) throws Exception {
                                 Log.v("ppLog", "map");
-                                return PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this));
+                                return PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(activityContext));
                             }
                         }
                 );
@@ -287,7 +293,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
     }
 
     private void setRequestVerifyCodeButtonText() {
-        long timeLeft = PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this));
+        long timeLeft = PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(activityContext));
         if (timeLeft >= 0) {
             binding.requestVerifyCodeButton.setText("" + timeLeft);
         }
@@ -324,7 +330,6 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         );
     }
 
-    //-----UI event handler-----
     public void requestVerifyCode() {
         jobProcessing.onNext(true);
         PPJSONObject jBody = new PPJSONObject();
@@ -344,17 +349,18 @@ public class ForgetPasswordActivity extends AppCompatActivity {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(ForgetPasswordActivity.this, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    return;
                                 }
 
-                                PPHelper.setLastVerifyCodeRequestTime(ForgetPasswordActivity.this);
+                                PPHelper.setLastVerifyCodeRequestTime(activityContext);
                             }
                         },
                         new Consumer<Throwable>() {
                             public void accept(Throwable t1) {
                                 jobProcessing.onNext(false);
 
-                                Toast.makeText(ForgetPasswordActivity.this, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
                                 Log.v("ppLog", "error:" + t1.toString());
                                 t1.printStackTrace();
                             }
@@ -382,7 +388,8 @@ public class ForgetPasswordActivity extends AppCompatActivity {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(ForgetPasswordActivity.this, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    return;
                                 }
                             }
                         },
@@ -390,7 +397,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                             public void accept(Throwable t1) {
                                 jobProcessing.onNext(false);
 
-                                Toast.makeText(ForgetPasswordActivity.this, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
                                 Log.v("ppLog", "error:" + t1.toString());
                                 t1.printStackTrace();
                             }

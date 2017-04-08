@@ -39,5 +39,7 @@
     <string name="please_agree">请选择同意</string>
     <string name="error_invalid_verify_code">验证码格式不正确</string>
     <string name="reset_password_ok">密码重置成功</string>
+    <string name="error_verify_code">验证码错误</string>
+    <string name="account_existed">账户已存在</string>
 
 </resources>

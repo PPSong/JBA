@@ -27,6 +27,7 @@
             android:visibility="invisible" />
 
         <android.support.design.widget.TextInputLayout
+            android:id="@+id/phone_input_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
 
@@ -36,9 +37,6 @@
                 android:layout_height="wrap_content"
                 android:hint="@string/prompt_phone"
                 android:inputType="number"
-                android:imeActionId="@+id/request_verify_code"
-                android:imeActionLabel="@string/request_verify_code"
-                android:imeOptions="actionUnspecified"
                 android:maxLines="1" />
 
         </android.support.design.widget.TextInputLayout>
@@ -53,13 +51,13 @@
             android:visibility="invisible" />
 
         <Button
-            android:id="@+id/go_sign_up_2_button"
+            android:id="@+id/request_verify_code_button"
             style="@style/Widget.AppCompat.Button.Colored"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
-            android:onClick="@{() -> presenter.requestVerifyCode()}"
             android:text="@string/request_verify_code"
+            android:enabled="false"
             android:textStyle="bold" />
 
     </LinearLayout>

@@ -1,5 +1,6 @@
 package com.penn.jba;
 
+import android.content.Context;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.support.v7.app.AppCompatActivity;
@@ -34,6 +35,8 @@ import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 
 public class LoginActivity extends AppCompatActivity {
+    private Context activityContext;
+    
     private ActivityLoginBinding binding;
 
     private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
@@ -43,6 +46,9 @@ public class LoginActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        activityContext = this;
+        
         binding = DataBindingUtil.setContentView(this, R.layout.activity_login);
         binding.setPresenter(this);
 
@@ -91,7 +97,7 @@ public class LoginActivity extends AppCompatActivity {
                 .map(new Function<CharSequence, String>() {
                     @Override
                     public String apply(CharSequence charSequence) throws Exception {
-                        return PPHelper.isPhoneValid(LoginActivity.this, charSequence.toString());
+                        return PPHelper.isPhoneValid(activityContext, charSequence.toString());
                     }
                 }).doOnNext(
                         new Consumer<String>() {
@@ -108,7 +114,7 @@ public class LoginActivity extends AppCompatActivity {
                 .map(new Function<CharSequence, String>() {
                     @Override
                     public String apply(CharSequence charSequence) throws Exception {
-                        return PPHelper.isPasswordValid(LoginActivity.this, charSequence.toString());
+                        return PPHelper.isPasswordValid(activityContext, charSequence.toString());
                     }
                 }).doOnNext(
                         new Consumer<String>() {
@@ -193,7 +199,8 @@ public class LoginActivity extends AppCompatActivity {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(LoginActivity.this, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    return;
                                 }
                             }
                         },
@@ -201,7 +208,7 @@ public class LoginActivity extends AppCompatActivity {
                             public void accept(Throwable t1) {
                                 jobProcessing.onNext(false);
 
-                                Toast.makeText(LoginActivity.this, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
                                 Log.v("ppLog", "error:" + t1.toString());
                                 t1.printStackTrace();
                             }
