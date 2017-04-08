@@ -94,41 +94,41 @@ public class SignUp1Activity extends AppCompatActivity implements TextWatcher {
 
     //-----UI event handler-----
     public void requestVerifyCode() {
-        if (requestVerifyCodeTask != null) {
-            return;
-        }
-
-        // Reset errors.
-        binding.phoneInput.setError(null);
-
-        // Store values at the time of the login attempt.
-        String phone = binding.phoneInput.getText().toString();
-
-        boolean cancel = false;
-        View focusView = null;
-
-        // Check for a valid phone.
-        if (TextUtils.isEmpty(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_field_required));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        } else if (!isPhoneValid(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_invalid_phone));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        }
-
-        if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
-            focusView.requestFocus();
-        } else {
-            // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
-            showProgress(true);
-            requestVerifyCodeTask = new RequestVerifyCodeTask(phone);
-            requestVerifyCodeTask.execute((Void) null);
-        }
+//        if (requestVerifyCodeTask != null) {
+//            return;
+//        }
+//
+//        // Reset errors.
+//        binding.phoneInput.setError(null);
+//
+//        // Store values at the time of the login attempt.
+//        String phone = binding.phoneInput.getText().toString();
+//
+//        boolean cancel = false;
+//        View focusView = null;
+//
+//        // Check for a valid phone.
+//        if (TextUtils.isEmpty(phone)) {
+//            binding.phoneInput.setError(getString(R.string.error_field_required));
+//            focusView = (focusView == null ? binding.phoneInput : focusView);
+//            cancel = true;
+//        } else if (!isPhoneValid(phone)) {
+//            binding.phoneInput.setError(getString(R.string.error_invalid_phone));
+//            focusView = (focusView == null ? binding.phoneInput : focusView);
+//            cancel = true;
+//        }
+//
+//        if (cancel) {
+//            // There was an error; don't attempt login and focus the first
+//            // form field with an error.
+//            focusView.requestFocus();
+//        } else {
+//            // Show a progress spinner, and kick off a background task to
+//            // perform the user login attempt.
+//            showProgress(true);
+//            requestVerifyCodeTask = new RequestVerifyCodeTask(phone);
+//            requestVerifyCodeTask.execute((Void) null);
+//        }
     }
 
     //-----helper-----

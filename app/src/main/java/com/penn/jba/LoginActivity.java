@@ -36,8 +36,6 @@ import io.reactivex.subjects.BehaviorSubject;
 public class LoginActivity extends AppCompatActivity {
     private ActivityLoginBinding binding;
 
-    private boolean jobProcess = false;
-
     private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
 
     private BehaviorSubject<Boolean> jobProcessing = BehaviorSubject.<Boolean>create();
@@ -59,6 +57,18 @@ public class LoginActivity extends AppCompatActivity {
                 return false;
             }
         });
+
+        setup();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        for (Disposable d : disposableList) {
+            if (!d.isDisposed()) {
+                d.dispose();
+            }
+        }
     }
 
     @Override
@@ -71,24 +81,17 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    @Override
-    protected void onStart() {
-        super.onStart();
-
+    protected void setup() {
+        //先发送个初始事件,便于判断按钮是否可用
         jobProcessing.onNext(false);
 
-        Observable<String> phoneInputObervable = RxTextView.textChanges(binding.phoneInput)
+        //手机号码输入监控
+        Observable<String> phoneInputObservable = RxTextView.textChanges(binding.phoneInput)
                 .skip(1)
                 .map(new Function<CharSequence, String>() {
                     @Override
                     public String apply(CharSequence charSequence) throws Exception {
-                        String error = "";
-                        if (TextUtils.isEmpty(charSequence)) {
-                            error = getString(R.string.error_field_required);
-                        } else if (!Pattern.matches("\\d{11}", charSequence.toString())) {
-                            error = getString(R.string.error_invalid_phone);
-                        }
-                        return error;
+                        return PPHelper.isPhoneValid(LoginActivity.this, charSequence.toString());
                     }
                 }).doOnNext(
                         new Consumer<String>() {
@@ -99,18 +102,13 @@ public class LoginActivity extends AppCompatActivity {
                         }
                 );
 
-        Observable<String> passwordInputObervable = RxTextView.textChanges(binding.passwordInput)
+        //密码输入监控
+        Observable<String> passwordInputObservable = RxTextView.textChanges(binding.passwordInput)
                 .skip(1)
                 .map(new Function<CharSequence, String>() {
                     @Override
                     public String apply(CharSequence charSequence) throws Exception {
-                        String error = "";
-                        if (TextUtils.isEmpty(charSequence)) {
-                            error = getString(R.string.error_field_required);
-                        } else if (!Pattern.matches("\\w{6,12}", charSequence.toString())) {
-                            error = getString(R.string.error_invalid_password);
-                        }
-                        return error;
+                        return PPHelper.isPasswordValid(LoginActivity.this, charSequence.toString());
                     }
                 }).doOnNext(
                         new Consumer<String>() {
@@ -120,34 +118,36 @@ public class LoginActivity extends AppCompatActivity {
                             }
                         }
                 );
-        ;
 
-        Observable<Object> signInButtonObervable = RxView.clicks(binding.signInButton)
-                .debounce(200, TimeUnit.MILLISECONDS);
-
+        //登录按钮是否可用
         disposableList.add(Observable.combineLatest(
-                phoneInputObervable,
-                passwordInputObervable,
+                phoneInputObservable,
+                passwordInputObservable,
                 jobProcessing,
                 new Function3<String, String, Boolean, Boolean>() {
                     @Override
                     public Boolean apply(String s, String s2, Boolean aBoolean) throws Exception {
-                        Log.v("ppLog", "test:" + (TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && !aBoolean));
                         return TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && !aBoolean;
                     }
-                }
-                )
-                        .distinctUntilChanged()
-                        .observeOn(AndroidSchedulers.mainThread())
-                        .subscribe(new Consumer<Boolean>() {
-                            @Override
-                            public void accept(Boolean aBoolean) throws Exception {
-                                binding.signInButton.setEnabled(aBoolean);
-                            }
-                        })
+                })
+                .subscribeOn(Schedulers.io())
+                .distinctUntilChanged()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<Boolean>() {
+                    @Override
+                    public void accept(Boolean aBoolean) throws Exception {
+                        binding.signInButton.setEnabled(aBoolean);
+                    }
+                })
         );
 
-        disposableList.add(signInButtonObervable
+        //登录按钮监控
+        Observable<Object> signInButtonObservable = RxView.clicks(binding.signInButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(signInButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
                 .subscribe(
                         new Consumer<Object>() {
                             public void accept(Object o) {
@@ -157,7 +157,9 @@ public class LoginActivity extends AppCompatActivity {
                 )
         );
 
+        //忘记密码,注册新账号是否可用,进度条是否可见
         disposableList.add(jobProcessing
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         new Consumer<Boolean>() {
@@ -179,8 +181,9 @@ public class LoginActivity extends AppCompatActivity {
                 .put("phone", binding.phoneInput.getText().toString())
                 .put("pwd", binding.passwordInput.getText().toString());
 
-        final Observable<String> loginResult = PPRetrofit.getInstance().api("user.login", jBody.getJSONObject());
-        loginResult.subscribeOn(Schedulers.newThread())
+        final Observable<String> apiResult = PPRetrofit.getInstance().api("user.login", jBody.getJSONObject());
+        apiResult
+                .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         new Consumer<String>() {
@@ -204,21 +207,6 @@ public class LoginActivity extends AppCompatActivity {
                             }
                         }
                 );
-    }
-
-    @Override
-    protected void onStop() {
-        super.onStop();
-        for (Disposable d : disposableList) {
-            if (!d.isDisposed()) {
-                d.dispose();
-            }
-        }
-    }
-
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
     }
 
     //-----UI event handler-----

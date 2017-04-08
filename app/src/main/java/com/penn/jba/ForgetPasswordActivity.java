@@ -1,15 +1,9 @@
 package com.penn.jba;
 
-import android.annotation.TargetApi;
-import android.content.Intent;
 import android.databinding.DataBindingUtil;
-import android.os.AsyncTask;
-import android.os.Build;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
@@ -17,18 +11,38 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.jakewharton.rxbinding2.view.RxView;
+import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.penn.jba.databinding.ActivityForgetPasswordBinding;
+import com.penn.jba.util.PPHelper;
+import com.penn.jba.util.PPJSONObject;
+import com.penn.jba.util.PPRetrofit;
+import com.penn.jba.util.PPWarn;
 
-import static com.penn.jba.util.PPHelper.isPasswordValid;
-import static com.penn.jba.util.PPHelper.isPhoneValid;
-import static com.penn.jba.util.PPHelper.isVerfifyCodeValid;
+import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 
-public class ForgetPasswordActivity extends AppCompatActivity implements TextWatcher {
-    private ResetPasswordTask resetPasswordTask;
-    private RequestVerifyCodeTask requestVerifyCodeTask;
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Action;
+import io.reactivex.functions.BiFunction;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.functions.Function3;
+import io.reactivex.functions.Function4;
+import io.reactivex.functions.Predicate;
+import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.BehaviorSubject;
+
+public class ForgetPasswordActivity extends AppCompatActivity {
     private ActivityForgetPasswordBinding binding;
 
-    private boolean jobProcess = false;
+    private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
+
+    private BehaviorSubject<Boolean> jobProcessing = BehaviorSubject.<Boolean>create();
+
+    private BehaviorSubject<Boolean> timeLeftProcessing = BehaviorSubject.<Boolean>create();
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -48,265 +62,305 @@ public class ForgetPasswordActivity extends AppCompatActivity implements TextWat
             }
         });
 
-        binding.phoneInput.addTextChangedListener(this);
-        binding.verifyCodeInput.addTextChangedListener(this);
-        binding.newPasswordInput.addTextChangedListener(this);
-
-        setOperationEnableState();
+        setup();
     }
 
     @Override
     protected void onDestroy() {
-        if (resetPasswordTask != null) {
-            resetPasswordTask.cancel(true);
-        }
-
-        if (requestVerifyCodeTask != null) {
-            requestVerifyCodeTask.cancel(true);
-        }
         super.onDestroy();
+        for (Disposable d : disposableList) {
+            if (!d.isDisposed()) {
+                d.dispose();
+            }
+        }
     }
 
-    @Override
-    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+    protected void setup() {
+        //先发送个初始事件,便于判断按钮是否可用
+        jobProcessing.onNext(false);
+        timeLeftProcessing.onNext(false);
 
+        //手机号码输入监控
+        Observable<String> phoneInputObservable = RxTextView.textChanges(binding.phoneInput)
+                .skip(1)
+                .map(new Function<CharSequence, String>() {
+                    @Override
+                    public String apply(CharSequence charSequence) throws Exception {
+                        return PPHelper.isPhoneValid(ForgetPasswordActivity.this, charSequence.toString());
+                    }
+                }).doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.phoneInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //获取验证码按钮是否可用
+        disposableList.add(Observable.combineLatest(
+                phoneInputObservable,
+                jobProcessing,
+                timeLeftProcessing,
+                new Function3<String, Boolean, Boolean, Boolean>() {
+                    @Override
+                    public Boolean apply(String s, Boolean aBoolean, Boolean bBoolean) throws Exception {
+                        return TextUtils.isEmpty(s) && !aBoolean && !bBoolean;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .distinctUntilChanged()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<Boolean>() {
+                    @Override
+                    public void accept(Boolean aBoolean) throws Exception {
+                        binding.requestVerifyCodeButton.setEnabled(aBoolean);
+                    }
+                })
+        );
+
+        //验证码输入监控
+        Observable<String> verifyCodeInputObservable = RxTextView.textChanges(binding.verifyCodeInput)
+                .skip(1)
+                .map(new Function<CharSequence, String>() {
+                    @Override
+                    public String apply(CharSequence charSequence) throws Exception {
+                        return PPHelper.isVerfifyCodeValid(ForgetPasswordActivity.this, charSequence.toString());
+                    }
+                }).doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.verifyCodeInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //密码输入监控
+        Observable<String> passwordInputObservable = RxTextView.textChanges(binding.newPasswordInput)
+                .skip(1)
+                .map(new Function<CharSequence, String>() {
+                    @Override
+                    public String apply(CharSequence charSequence) throws Exception {
+                        return PPHelper.isPasswordValid(ForgetPasswordActivity.this, charSequence.toString());
+                    }
+                }).doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.newPasswordInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //重置密码按钮是否可用
+        disposableList.add(Observable.combineLatest(
+                phoneInputObservable,
+                verifyCodeInputObservable,
+                passwordInputObservable,
+                jobProcessing,
+                new Function4<String, String, String, Boolean, Boolean>() {
+                    @Override
+                    public Boolean apply(String s, String s2, String s3, Boolean aBoolean) throws Exception {
+                        return TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && TextUtils.isEmpty(s3) && !aBoolean;
+                    }
+                })
+                .subscribeOn(Schedulers.io())
+                .distinctUntilChanged()
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new Consumer<Boolean>() {
+                    @Override
+                    public void accept(Boolean aBoolean) throws Exception {
+                        binding.resetPasswordButton.setEnabled(aBoolean);
+                    }
+                })
+        );
+
+        //控制获取验证码倒计时
+        final Observable<Long> timeLeftObservable = Observable.interval(1, TimeUnit.SECONDS, Schedulers.io())
+                .doOnNext(new Consumer<Long>() {
+                    @Override
+                    public void accept(Long aLong) throws Exception {
+                        Log.v("ppLog", "doOnNext");
+                    }
+                })
+                .takeWhile(new Predicate<Long>() {
+                    @Override
+                    public boolean test(Long aLong) throws Exception {
+                        Log.v("ppLog", "takeWhile");
+                        boolean b = (System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this) <= PPHelper.REQUEST_VERIFY_CODE_INTERVAL;
+                        return b;
+                    }
+                })
+                .map(new Function<Long, Long>() {
+                    @Override
+                    public Long apply(Long aLong) throws Exception {
+                        Log.v("ppLog", "map");
+                        return PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this));
+                    }
+                });
+
+        //获取验证码密码按钮监控
+        Observable<Object> requestVerifyCodeButtonObservable = RxView.clicks(binding.requestVerifyCodeButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(requestVerifyCodeButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                startTimeLeft(timeLeftObservable);
+                                requestVerifyCode();
+                            }
+                        }
+                )
+        );
+
+        //重设密码按钮监控
+        Observable<Object> resetPasswordButtonObservable = RxView.clicks(binding.resetPasswordButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(resetPasswordButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                resetPassword();
+                            }
+                        }
+                )
+        );
+
+        //进度条是否可见
+        disposableList.add(jobProcessing
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<Boolean>() {
+                            @Override
+                            public void accept(Boolean aBoolean) throws Exception {
+                                binding.jobProgress.setVisibility(aBoolean ? View.VISIBLE : View.INVISIBLE);
+                            }
+                        }
+                )
+        );
+
+        setRequestVerifyCodeButtonText();
+        startTimeLeft(timeLeftObservable);
     }
 
-    @Override
-    public void onTextChanged(CharSequence s, int start, int before, int count) {
-
+    private void setRequestVerifyCodeButtonText() {
+        long timeLeft = PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this));
+        if (timeLeft >= 0) {
+            binding.requestVerifyCodeButton.setText("" + timeLeft);
+        }
     }
 
-    @Override
-    public void afterTextChanged(Editable s) {
-        setOperationEnableState();
+    private void startTimeLeft(Observable<Long> timeLeftObservable) {
+        timeLeftProcessing.onNext(true);
+        disposableList.add(timeLeftObservable
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<Long>() {
+                            @Override
+                            public void accept(Long aLong) throws Exception {
+                                Log.v("ppLog", "long:" + aLong);
+                                binding.requestVerifyCodeButton.setText("" + aLong);
+                            }
+                        },
+                        new Consumer<Throwable>() {
+                            @Override
+                            public void accept(Throwable throwable) throws Exception {
+
+                            }
+                        },
+                        new Action() {
+                            @Override
+                            public void run() throws Exception {
+                                Log.v("ppLog", "finished");
+                                timeLeftProcessing.onNext(false);
+                                binding.requestVerifyCodeButton.setText(getString(R.string.request_verify_code));
+                            }
+                        }
+                )
+        );
     }
 
     //-----UI event handler-----
     public void requestVerifyCode() {
-        String phone;
+        jobProcessing.onNext(true);
+        PPJSONObject jBody = new PPJSONObject();
+        jBody
+                .put("phone", binding.phoneInput.getText().toString());
 
-        if (resetPasswordTask != null) {
-            return;
-        }
+        final Observable<String> apiResult = PPRetrofit.getInstance().api("user.sendForgotPassCheckCode", jBody.getJSONObject());
+        apiResult
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<String>() {
+                            public void accept(String s) {
+                                Log.v("ppLog", "get result:" + s);
+                                jobProcessing.onNext(false);
 
-        // Reset errors.
-        binding.phoneInput.setError(null);
+                                PPWarn ppWarn = PPHelper.ppWarning(s);
+                                if (ppWarn != null) {
+                                    Toast.makeText(ForgetPasswordActivity.this, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                }
 
-        // Store values at the time of the login attempt.
-        phone = binding.phoneInput.getText().toString();
+                                PPHelper.setLastVerifyCodeRequestTime(ForgetPasswordActivity.this);
+                            }
+                        },
+                        new Consumer<Throwable>() {
+                            public void accept(Throwable t1) {
+                                jobProcessing.onNext(false);
 
-        boolean cancel = false;
-        View focusView = null;
-
-        // Check for a valid phone.
-        if (TextUtils.isEmpty(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_field_required));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        } else if (!isPhoneValid(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_invalid_phone));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        }
-
-        if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
-            focusView.requestFocus();
-        } else {
-            // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
-            showProgress(true);
-            requestVerifyCodeTask = new RequestVerifyCodeTask(phone);
-            requestVerifyCodeTask.execute((Void) null);
-        }
+                                Toast.makeText(ForgetPasswordActivity.this, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Log.v("ppLog", "error:" + t1.toString());
+                                t1.printStackTrace();
+                            }
+                        }
+                );
     }
 
     public void resetPassword() {
-        String phone, verifyCode, newPassword;
+        jobProcessing.onNext(true);
+        PPJSONObject jBody = new PPJSONObject();
+        jBody
+                .put("phone", binding.phoneInput.getText().toString())
+                .put("checkCode", binding.verifyCodeInput.getText().toString())
+                .put("pwd", binding.newPasswordInput.getText().toString());
 
-        if (resetPasswordTask != null) {
-            return;
-        }
+        final Observable<String> apiResult = PPRetrofit.getInstance().api("user.changePassByCheckCode", jBody.getJSONObject());
+        apiResult
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<String>() {
+                            public void accept(String s) {
+                                Log.v("ppLog", "get result:" + s);
+                                jobProcessing.onNext(false);
 
-        // Reset errors.
-        binding.phoneInput.setError(null);
-        binding.verifyCodeInput.setError(null);
-        binding.newPasswordInput.setError(null);
+                                PPWarn ppWarn = PPHelper.ppWarning(s);
+                                if (ppWarn != null) {
+                                    Toast.makeText(ForgetPasswordActivity.this, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                }
+                            }
+                        },
+                        new Consumer<Throwable>() {
+                            public void accept(Throwable t1) {
+                                jobProcessing.onNext(false);
 
-        // Store values at the time of the login attempt.
-        phone = binding.phoneInput.getText().toString();
-        verifyCode = binding.verifyCodeInput.getText().toString();
-        newPassword = binding.newPasswordInput.getText().toString();
-
-        boolean cancel = false;
-        View focusView = null;
-
-        // Check for a valid phone.
-        if (TextUtils.isEmpty(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_field_required));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        } else if (!isPhoneValid(phone)) {
-            binding.phoneInput.setError(getString(R.string.error_invalid_phone));
-            focusView = (focusView == null ? binding.phoneInput : focusView);
-            cancel = true;
-        }
-
-        // Check for a valid password.
-        if (TextUtils.isEmpty(verifyCode) || !isVerfifyCodeValid(verifyCode)) {
-            binding.verifyCodeInput.setError(getString(R.string.error_invalid_verify_code));
-            focusView = (focusView == null ? binding.verifyCodeInput : focusView);
-            cancel = true;
-        }
-
-        // Check for a valid password.
-        if (TextUtils.isEmpty(newPassword) || !isPasswordValid(newPassword)) {
-            binding.newPasswordInput.setError(getString(R.string.error_invalid_password));
-            focusView = (focusView == null ? binding.newPasswordInput : focusView);
-            cancel = true;
-        }
-
-        if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
-            focusView.requestFocus();
-        } else {
-            // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
-            showProgress(true);
-            resetPasswordTask = new ResetPasswordTask(phone, verifyCode, newPassword);
-            resetPasswordTask.execute((Void) null);
-        }
+                                Toast.makeText(ForgetPasswordActivity.this, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Log.v("ppLog", "error:" + t1.toString());
+                                t1.printStackTrace();
+                            }
+                        }
+                );
     }
 
     //-----helper-----
-    class ResetPasswordTask extends AsyncTask<Void, Void, Boolean> {
-        String phone, verifyCode, newPassword;
-
-        ResetPasswordTask(String phone, String verifyCode, String newPassword) {
-            this.phone = phone;
-            this.verifyCode = verifyCode;
-            this.newPassword = newPassword;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
-
-            try {
-                // Simulate network access.
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                return false;
-            }
-
-            // TODO: register the new account here.
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(final Boolean success) {
-            resetPasswordTask = null;
-            showProgress(false);
-
-            if (success) {
-                Toast.makeText(ForgetPasswordActivity.this, R.string.reset_password_ok, Toast.LENGTH_LONG).show();
-                finish();
-            } else {
-                //deal with error message
-            }
-        }
-
-        @Override
-        protected void onCancelled() {
-            resetPasswordTask = null;
-            showProgress(false);
-        }
-    }
-
-    class RequestVerifyCodeTask extends AsyncTask<Void, Void, Boolean> {
-        private String phone;
-
-        public RequestVerifyCodeTask(String phone) {
-            this.phone = phone;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
-
-            try {
-                // Simulate network access.
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                return false;
-            }
-
-            // TODO: register the new account here.
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(final Boolean success) {
-            requestVerifyCodeTask = null;
-            showProgress(false);
-
-            if (success) {
-//                Toast.makeText(ForgetPasswordActivity.this, R.string.reset_password_ok, Toast.LENGTH_LONG).show();
-//                finish();
-            } else {
-                //deal with error message
-            }
-        }
-
-        @Override
-        protected void onCancelled() {
-            requestVerifyCodeTask = null;
-            showProgress(false);
-        }
-    }
-
-    //pptodo TargetApi有何用
-    @TargetApi(Build.VERSION_CODES.HONEYCOMB_MR2)
-    private void showProgress(final boolean show) {
-        jobProcess = (show ? true : false);
-        setOperationEnableState();
-        binding.jobProgress.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-    }
-
-    //设置可操作控件可用状态
-    private void setOperationEnableState() {
-        setResetPasswordButtonEnableState();
-        setRequestVerifyCodeButtonEnableState();
-    }
-
-    private void setResetPasswordButtonEnableState() {
-        boolean enable = true;
-
-        if (jobProcess) {
-            enable = false;
-        } else if (TextUtils.isEmpty(binding.phoneInput.getText())) {
-            enable = false;
-        } else if (TextUtils.isEmpty(binding.verifyCodeInput.getText())) {
-            enable = false;
-        } else if (TextUtils.isEmpty(binding.newPasswordInput.getText())) {
-            enable = false;
-        }
-
-        binding.resetPasswordButton.setEnabled(enable);
-    }
-
-    private void setRequestVerifyCodeButtonEnableState() {
-        boolean enable = true;
-
-        if (jobProcess) {
-            enable = false;
-        } else if (TextUtils.isEmpty(binding.phoneInput.getText())) {
-            enable = false;
-        }
-
-        binding.requestVerifyCodeButton.setEnabled(enable);
-    }
 }

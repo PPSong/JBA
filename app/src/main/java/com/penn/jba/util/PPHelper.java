@@ -1,11 +1,13 @@
 package com.penn.jba.util;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
+import com.penn.jba.R;
 
 import java.util.regex.Pattern;
 
@@ -15,19 +17,40 @@ import java.util.regex.Pattern;
 
 public class PPHelper {
     //秒
-    public static final int REQUEST_VERIFY_CODE_INTERVAL = 5;
+    public static final int REQUEST_VERIFY_CODE_INTERVAL = 20;
 
-    public static boolean isPhoneValid(String phone) {
-        return Pattern.matches("\\d{11}", phone);
+    public static String isPhoneValid(Context context, String phone) {
+        String error = "";
+        if (TextUtils.isEmpty(phone)) {
+            error = context.getString(R.string.error_field_required);
+        } else if (!Pattern.matches("\\d{11}", phone)) {
+            error = context.getString(R.string.error_invalid_phone);
+        }
+
+        return error;
     }
 
-    public static boolean isPasswordValid(String password) {
-        return password.length() >= 6;
+    public static String isPasswordValid(Context context, String password) {
+        String error = "";
+        if (TextUtils.isEmpty(password)) {
+            error = context.getString(R.string.error_field_required);
+        } else if (!Pattern.matches("\\w{6,12}", password.toString())) {
+            error = context.getString(R.string.error_invalid_password);
+        }
+
+        return error;
     }
 
 
-    public static boolean isVerfifyCodeValid(String password) {
-        return password.length() == 4;
+    public static String isVerfifyCodeValid(Context context, String verifyCode) {
+        String error = "";
+        if (TextUtils.isEmpty(verifyCode)) {
+            error = context.getString(R.string.error_field_required);
+        } else if (!Pattern.matches("\\d{6}", verifyCode)) {
+            error = context.getString(R.string.error_invalid_verify_code);
+        }
+
+        return error;
     }
 
     public static void setLastVerifyCodeRequestTime(Context context) {
