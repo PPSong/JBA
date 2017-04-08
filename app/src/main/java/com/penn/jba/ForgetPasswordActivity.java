@@ -26,7 +26,6 @@ import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
-import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
 import io.reactivex.functions.Function3;
@@ -43,6 +42,18 @@ public class ForgetPasswordActivity extends AppCompatActivity {
     private BehaviorSubject<Boolean> jobProcessing = BehaviorSubject.<Boolean>create();
 
     private BehaviorSubject<Boolean> timeLeftProcessing = BehaviorSubject.<Boolean>create();
+
+    private Observable<Long> timeLeftObservable;
+
+    private Observable<String> phoneInputObservable;
+
+    private Observable<String> verifyCodeInputObservable;
+
+    private Observable<String> passwordInputObservable;
+
+    private Observable<Object> requestVerifyCodeButtonObservable;
+
+    private Observable<Object> resetPasswordButtonObservable;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -81,14 +92,17 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         timeLeftProcessing.onNext(false);
 
         //手机号码输入监控
-        Observable<String> phoneInputObservable = RxTextView.textChanges(binding.phoneInput)
+        phoneInputObservable = RxTextView.textChanges(binding.phoneInput)
                 .skip(1)
-                .map(new Function<CharSequence, String>() {
-                    @Override
-                    public String apply(CharSequence charSequence) throws Exception {
-                        return PPHelper.isPhoneValid(ForgetPasswordActivity.this, charSequence.toString());
-                    }
-                }).doOnNext(
+                .map(
+                        new Function<CharSequence, String>() {
+                            @Override
+                            public String apply(CharSequence charSequence) throws Exception {
+                                return PPHelper.isPhoneValid(ForgetPasswordActivity.this, charSequence.toString());
+                            }
+                        }
+                )
+                .doOnNext(
                         new Consumer<String>() {
                             @Override
                             public void accept(String error) throws Exception {
@@ -98,36 +112,44 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                 );
 
         //获取验证码按钮是否可用
-        disposableList.add(Observable.combineLatest(
-                phoneInputObservable,
-                jobProcessing,
-                timeLeftProcessing,
-                new Function3<String, Boolean, Boolean, Boolean>() {
-                    @Override
-                    public Boolean apply(String s, Boolean aBoolean, Boolean bBoolean) throws Exception {
-                        return TextUtils.isEmpty(s) && !aBoolean && !bBoolean;
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .distinctUntilChanged()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Boolean>() {
-                    @Override
-                    public void accept(Boolean aBoolean) throws Exception {
-                        binding.requestVerifyCodeButton.setEnabled(aBoolean);
-                    }
-                })
+        disposableList.add(
+                Observable
+                        .combineLatest(
+                                phoneInputObservable,
+                                jobProcessing,
+                                timeLeftProcessing,
+                                new Function3<String, Boolean, Boolean, Boolean>() {
+                                    @Override
+                                    public Boolean apply(String s, Boolean aBoolean, Boolean bBoolean) throws Exception {
+                                        return TextUtils.isEmpty(s) && !aBoolean && !bBoolean;
+                                    }
+                                }
+                        )
+                        .subscribeOn(Schedulers.io())
+                        .distinctUntilChanged()
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                new Consumer<Boolean>() {
+                                    @Override
+                                    public void accept(Boolean aBoolean) throws Exception {
+                                        binding.requestVerifyCodeButton.setEnabled(aBoolean);
+                                    }
+                                }
+                        )
         );
 
         //验证码输入监控
-        Observable<String> verifyCodeInputObservable = RxTextView.textChanges(binding.verifyCodeInput)
+        verifyCodeInputObservable = RxTextView.textChanges(binding.verifyCodeInput)
                 .skip(1)
-                .map(new Function<CharSequence, String>() {
-                    @Override
-                    public String apply(CharSequence charSequence) throws Exception {
-                        return PPHelper.isVerfifyCodeValid(ForgetPasswordActivity.this, charSequence.toString());
-                    }
-                }).doOnNext(
+                .map(
+                        new Function<CharSequence, String>() {
+                            @Override
+                            public String apply(CharSequence charSequence) throws Exception {
+                                return PPHelper.isVerfifyCodeValid(ForgetPasswordActivity.this, charSequence.toString());
+                            }
+                        }
+                )
+                .doOnNext(
                         new Consumer<String>() {
                             @Override
                             public void accept(String error) throws Exception {
@@ -137,14 +159,17 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                 );
 
         //密码输入监控
-        Observable<String> passwordInputObservable = RxTextView.textChanges(binding.newPasswordInput)
+        passwordInputObservable = RxTextView.textChanges(binding.newPasswordInput)
                 .skip(1)
-                .map(new Function<CharSequence, String>() {
-                    @Override
-                    public String apply(CharSequence charSequence) throws Exception {
-                        return PPHelper.isPasswordValid(ForgetPasswordActivity.this, charSequence.toString());
-                    }
-                }).doOnNext(
+                .map(
+                        new Function<CharSequence, String>() {
+                            @Override
+                            public String apply(CharSequence charSequence) throws Exception {
+                                return PPHelper.isPasswordValid(ForgetPasswordActivity.this, charSequence.toString());
+                            }
+                        }
+                )
+                .doOnNext(
                         new Consumer<String>() {
                             @Override
                             public void accept(String error) throws Exception {
@@ -154,54 +179,65 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                 );
 
         //重置密码按钮是否可用
-        disposableList.add(Observable.combineLatest(
-                phoneInputObservable,
-                verifyCodeInputObservable,
-                passwordInputObservable,
-                jobProcessing,
-                new Function4<String, String, String, Boolean, Boolean>() {
-                    @Override
-                    public Boolean apply(String s, String s2, String s3, Boolean aBoolean) throws Exception {
-                        return TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && TextUtils.isEmpty(s3) && !aBoolean;
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .distinctUntilChanged()
-                .observeOn(AndroidSchedulers.mainThread())
-                .subscribe(new Consumer<Boolean>() {
-                    @Override
-                    public void accept(Boolean aBoolean) throws Exception {
-                        binding.resetPasswordButton.setEnabled(aBoolean);
-                    }
-                })
+        disposableList.add(
+                Observable
+                        .combineLatest(
+                                phoneInputObservable,
+                                verifyCodeInputObservable,
+                                passwordInputObservable,
+                                jobProcessing,
+                                new Function4<String, String, String, Boolean, Boolean>() {
+                                    @Override
+                                    public Boolean apply(String s, String s2, String s3, Boolean aBoolean) throws Exception {
+                                        return TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && TextUtils.isEmpty(s3) && !aBoolean;
+                                    }
+                                }
+                        )
+                        .subscribeOn(Schedulers.io())
+                        .distinctUntilChanged()
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                new Consumer<Boolean>() {
+                                    @Override
+                                    public void accept(Boolean aBoolean) throws Exception {
+                                        binding.resetPasswordButton.setEnabled(aBoolean);
+                                    }
+                                }
+                        )
         );
 
         //控制获取验证码倒计时
-        final Observable<Long> timeLeftObservable = Observable.interval(1, TimeUnit.SECONDS, Schedulers.io())
-                .doOnNext(new Consumer<Long>() {
-                    @Override
-                    public void accept(Long aLong) throws Exception {
-                        Log.v("ppLog", "doOnNext");
-                    }
-                })
-                .takeWhile(new Predicate<Long>() {
-                    @Override
-                    public boolean test(Long aLong) throws Exception {
-                        Log.v("ppLog", "takeWhile");
-                        boolean b = (System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this) <= PPHelper.REQUEST_VERIFY_CODE_INTERVAL;
-                        return b;
-                    }
-                })
-                .map(new Function<Long, Long>() {
-                    @Override
-                    public Long apply(Long aLong) throws Exception {
-                        Log.v("ppLog", "map");
-                        return PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this));
-                    }
-                });
+        timeLeftObservable = Observable.interval(1, TimeUnit.SECONDS, Schedulers.io())
+                .doOnNext(
+                        new Consumer<Long>() {
+                            @Override
+                            public void accept(Long aLong) throws Exception {
+                                Log.v("ppLog", "doOnNext");
+                            }
+                        }
+                )
+                .takeWhile(
+                        new Predicate<Long>() {
+                            @Override
+                            public boolean test(Long aLong) throws Exception {
+                                Log.v("ppLog", "takeWhile");
+                                boolean b = (System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this) <= PPHelper.REQUEST_VERIFY_CODE_INTERVAL;
+                                return b;
+                            }
+                        }
+                )
+                .map(
+                        new Function<Long, Long>() {
+                            @Override
+                            public Long apply(Long aLong) throws Exception {
+                                Log.v("ppLog", "map");
+                                return PPHelper.REQUEST_VERIFY_CODE_INTERVAL - ((System.currentTimeMillis() / 1000) - PPHelper.getLastVerifyCodeRequestTime(ForgetPasswordActivity.this));
+                            }
+                        }
+                );
 
         //获取验证码密码按钮监控
-        Observable<Object> requestVerifyCodeButtonObservable = RxView.clicks(binding.requestVerifyCodeButton)
+        requestVerifyCodeButtonObservable = RxView.clicks(binding.requestVerifyCodeButton)
                 .debounce(200, TimeUnit.MILLISECONDS);
 
         disposableList.add(requestVerifyCodeButtonObservable
@@ -210,7 +246,6 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                 .subscribe(
                         new Consumer<Object>() {
                             public void accept(Object o) {
-                                startTimeLeft(timeLeftObservable);
                                 requestVerifyCode();
                             }
                         }
@@ -218,7 +253,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         );
 
         //重设密码按钮监控
-        Observable<Object> resetPasswordButtonObservable = RxView.clicks(binding.resetPasswordButton)
+        resetPasswordButtonObservable = RxView.clicks(binding.resetPasswordButton)
                 .debounce(200, TimeUnit.MILLISECONDS);
 
         disposableList.add(resetPasswordButtonObservable
@@ -248,7 +283,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         );
 
         setRequestVerifyCodeButtonText();
-        startTimeLeft(timeLeftObservable);
+        startTimeLeft();
     }
 
     private void setRequestVerifyCodeButtonText() {
@@ -258,7 +293,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         }
     }
 
-    private void startTimeLeft(Observable<Long> timeLeftObservable) {
+    private void startTimeLeft() {
         timeLeftProcessing.onNext(true);
         disposableList.add(timeLeftObservable
                 .subscribeOn(Schedulers.io())
@@ -304,6 +339,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                         new Consumer<String>() {
                             public void accept(String s) {
                                 Log.v("ppLog", "get result:" + s);
+                                startTimeLeft();
                                 jobProcessing.onNext(false);
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
