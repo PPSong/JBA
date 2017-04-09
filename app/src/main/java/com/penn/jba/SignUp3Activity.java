@@ -5,8 +5,12 @@ import android.app.Dialog;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
 
+import android.content.Context;
+import android.databinding.DataBindingUtil;
 import android.os.AsyncTask;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
@@ -19,24 +23,378 @@ import android.widget.CheckBox;
 import android.widget.DatePicker;
 import android.widget.EditText;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.jakewharton.rxbinding2.view.RxView;
+import com.jakewharton.rxbinding2.widget.RxCheckedTextView;
+import com.jakewharton.rxbinding2.widget.RxCompoundButton;
+import com.jakewharton.rxbinding2.widget.RxRadioGroup;
+import com.jakewharton.rxbinding2.widget.RxTextView;
+import com.penn.jba.databinding.ActivitySignUp2Binding;
+import com.penn.jba.databinding.ActivitySignUp3Binding;
+import com.penn.jba.util.PPHelper;
+import com.penn.jba.util.PPJSONObject;
+import com.penn.jba.util.PPRetrofit;
+import com.penn.jba.util.PPWarn;
+
+import io.reactivex.Observable;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.BiFunction;
+import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
+import io.reactivex.functions.Function3;
+import io.reactivex.functions.Function4;
+import io.reactivex.functions.Function6;
+import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subjects.BehaviorSubject;
+
+import static com.penn.jba.util.PPHelper.isValidDate;
 
 public class SignUp3Activity extends AppCompatActivity {
-    private UserSignUpTask mAuthTask = null;
+    private Context activityContext;
 
-    private EditText mPassword;
-    private EditText mNickname;
+    private static ActivitySignUp3Binding binding;
 
-    private View mProgressView;
-    private Button mSignUpButton;
+    private String phone;
 
-    private TextView mSexError;
+    private String verifyCode;
 
-    private static EditText mBirthday;
+    private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
 
-    private CheckBox mAgreeCheck;
+    private BehaviorSubject<Boolean> jobProcessing = BehaviorSubject.<Boolean>create();
 
-    private String sex = "none";
-    private Boolean agree = false;
+    private Observable<String> passwordInputObservable;
+
+    private Observable<String> nicknameInputObservable;
+
+    private Observable<String> birthdayInputObservable;
+
+    private Observable<String> sexInputObservable;
+
+    private Observable<String> agreeInputObservable;
+
+    private Observable<Object> randomNicknameButtonObservable;
+
+    private Observable<Object> signUpButtonObservable;
+
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+
+        activityContext = this;
+
+        phone = getIntent().getStringExtra("phone");
+        verifyCode = getIntent().getStringExtra("verifyCode");
+
+        binding = DataBindingUtil.setContentView(this, R.layout.activity_sign_up3);
+        binding.setPresenter(this);
+
+        setup();
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        for (Disposable d : disposableList) {
+            if (!d.isDisposed()) {
+                d.dispose();
+            }
+        }
+    }
+
+    public void setup() {
+        //先发送个初始事件,便于判断按钮是否可用
+        jobProcessing.onNext(false);
+
+        //密码输入监控
+        passwordInputObservable = RxTextView.textChanges(binding.passwordInput)
+                .skip(1)
+                .map(
+                        new Function<CharSequence, String>() {
+                            @Override
+                            public String apply(CharSequence charSequence) throws Exception {
+                                return PPHelper.isPasswordValid(activityContext, charSequence.toString());
+                            }
+                        }
+                )
+                .doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.passwordInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //昵称输入监控
+        nicknameInputObservable = RxTextView.textChanges(binding.nicknameInput)
+                .skip(1)
+                .map(
+                        new Function<CharSequence, String>() {
+                            @Override
+                            public String apply(CharSequence charSequence) throws Exception {
+                                return PPHelper.isNicknameValid(activityContext, charSequence.toString());
+                            }
+                        }
+                )
+                .doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.nicknameInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //生日输入监控
+        birthdayInputObservable = RxTextView.textChanges(binding.birthdayInput)
+                .skip(1)
+                .map(
+                        new Function<CharSequence, String>() {
+                            @Override
+                            public String apply(CharSequence charSequence) throws Exception {
+                                return PPHelper.isBirthdayValid(activityContext, charSequence.toString());
+                            }
+                        }
+                )
+                .doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.birthdayInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //pptodo 改成Rxbinding
+        binding.birthdayInput.setOnFocusChangeListener(new View.OnFocusChangeListener() {
+            @Override
+            public void onFocusChange(View v, boolean hasFocus) {
+                if (hasFocus) {
+                    binding.birthdayInput.setError(null);
+                    DialogFragment newFragment = new DatePickerFragment();
+                    newFragment.show(getSupportFragmentManager(), "datePicker");
+                } else {
+                }
+            }
+        });
+
+        //性别输入监控
+        sexInputObservable = RxRadioGroup.checkedChanges(binding.sexInput)
+                .skip(1)
+                .map(
+                        new Function<Integer, String>() {
+
+                            @Override
+                            public String apply(Integer integer) throws Exception {
+                                String error = "";
+                                Log.v("ppLog", "RxRadioGroup:" + integer);
+                                if (integer < 0) {
+                                    error = getString(R.string.must_agree);
+                                }
+                                return error;
+                            }
+                        }
+                )
+                .doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                binding.sexInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //同意守则勾选监控
+        agreeInputObservable = RxCompoundButton.checkedChanges(binding.agreeCheck)
+                .skip(1)
+                .map(
+                        new Function<Boolean, String>() {
+
+                            @Override
+                            public String apply(Boolean aBoolean) throws Exception {
+                                String error = "";
+                                if (!aBoolean) {
+                                    error = getString(R.string.must_agree);
+                                }
+                                return error;
+                            }
+                        }
+                )
+                .doOnNext(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String error) throws Exception {
+                                Log.v("ppLog", "RxCompoundButton");
+                                binding.agreeInputLayout.setError(TextUtils.isEmpty(error) ? null : error);
+                            }
+                        }
+                );
+
+        //注册按钮是否可用
+        disposableList.add(
+                Observable
+                        .combineLatest(
+                                jobProcessing,
+                                passwordInputObservable,
+                                nicknameInputObservable,
+                                birthdayInputObservable,
+                                sexInputObservable,
+                                agreeInputObservable,
+                                new Function6<Boolean, String, String, String, String, String, Boolean>() {
+
+                                    @Override
+                                    public Boolean apply(Boolean aBoolean, String s, String s2, String s3, String s4, String s5) throws Exception {
+                                        return !aBoolean && TextUtils.isEmpty(s) && TextUtils.isEmpty(s2) && TextUtils.isEmpty(s3) && TextUtils.isEmpty(s4) && TextUtils.isEmpty(s5);
+                                    }
+                                }
+                        )
+                        .subscribeOn(AndroidSchedulers.mainThread())
+                        .distinctUntilChanged()
+                        .observeOn(AndroidSchedulers.mainThread())
+                        .subscribe(
+                                new Consumer<Boolean>() {
+                                    @Override
+                                    public void accept(Boolean aBoolean) throws Exception {
+                                        binding.signUpButton.setEnabled(aBoolean);
+                                    }
+                                }
+                        )
+        );
+
+        //获取随机昵称按钮监控
+        randomNicknameButtonObservable = RxView.clicks(binding.getRandomNicknameButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(randomNicknameButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                requestRandomNickname();
+                            }
+                        }
+                )
+        );
+
+        //注册按钮监控
+        signUpButtonObservable = RxView.clicks(binding.signUpButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(signUpButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                signUp();
+                            }
+                        }
+                )
+        );
+
+        //进度条是否可见, 随机生成昵称按钮是否可用
+        disposableList.add(jobProcessing
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<Boolean>() {
+                            @Override
+                            public void accept(Boolean aBoolean) throws Exception {
+                                binding.jobProgress.setVisibility(aBoolean ? View.VISIBLE : View.INVISIBLE);
+                                binding.getRandomNicknameButton.setEnabled(!aBoolean);
+                            }
+                        }
+                )
+        );
+    }
+
+    private void requestRandomNickname() {
+        jobProcessing.onNext(true);
+        PPJSONObject jBody = new PPJSONObject();
+
+        final Observable<String> apiResult = PPRetrofit.getInstance().api("user.randomNickName", jBody.getJSONObject());
+        apiResult
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<String>() {
+                            public void accept(String s) {
+                                Log.v("ppLog", "get result:" + s);
+                                jobProcessing.onNext(false);
+
+                                PPWarn ppWarn = PPHelper.ppWarning(s);
+                                if (ppWarn != null) {
+                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+
+                                String nickname = PPHelper.ppFromString(s, "data.nickname").getAsString();
+                                binding.nicknameInput.setText(nickname);
+                            }
+                        },
+                        new Consumer<Throwable>() {
+                            public void accept(Throwable t1) {
+                                jobProcessing.onNext(false);
+
+                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Log.v("ppLog", "error:" + t1.toString());
+                                t1.printStackTrace();
+                            }
+                        }
+                );
+    }
+
+    public void signUp() {
+        jobProcessing.onNext(true);
+        PPJSONObject jBody = new PPJSONObject();
+
+        int sex = binding.sexInput.getCheckedRadioButtonId() == R.id.male_radio ? 1 : 2;
+
+        jBody
+                .put("phone", phone)
+                .put("pwd", binding.passwordInput.getText().toString())
+                .put("gender", sex)
+                .put("checkCode", verifyCode)
+                .put("nickname", binding.nicknameInput.getText().toString())
+                .put("birthday", binding.birthdayInput.getText().toString());
+
+        final Observable<String> apiResult = PPRetrofit.getInstance().api("user.register", jBody.getJSONObject());
+        apiResult
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<String>() {
+                            public void accept(String s) {
+                                Log.v("ppLog", "get result:" + s);
+                                jobProcessing.onNext(false);
+
+                                PPWarn ppWarn = PPHelper.ppWarning(s);
+                                if (ppWarn != null) {
+                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    return;
+                                }
+
+                                String nickname = PPHelper.ppFromString(s, "data.nickname").getAsString();
+                                binding.nicknameInput.setText(nickname);
+                            }
+                        },
+                        new Consumer<Throwable>() {
+                            public void accept(Throwable t1) {
+                                jobProcessing.onNext(false);
+
+                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                Log.v("ppLog", "error:" + t1.toString());
+                                t1.printStackTrace();
+                            }
+                        }
+                );
+
+    }
+
+    //-----helper-----
 
     public static class DatePickerFragment extends DialogFragment
             implements DatePickerDialog.OnDateSetListener {
@@ -62,200 +420,7 @@ public class SignUp3Activity extends AppCompatActivity {
             cal.set(Calendar.DAY_OF_MONTH, day);
             cal.set(Calendar.MONTH, month);
             String dateString = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
-            mBirthday.setText(dateString);
+            binding.birthdayInput.setText(dateString);
         }
-    }
-
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_sign_up3);
-
-        mPassword = (EditText) findViewById(R.id.password_input);
-
-        mNickname = (EditText) findViewById(R.id.nickname_input);
-
-        mBirthday = (EditText) findViewById(R.id.birthday_input);
-
-        mBirthday.setOnFocusChangeListener(new View.OnFocusChangeListener() {
-            @Override
-            public void onFocusChange(View v, boolean hasFocus) {
-                if (hasFocus) {
-                    mBirthday.setError(null);
-                    DialogFragment newFragment = new DatePickerFragment();
-                    newFragment.show(getSupportFragmentManager(), "datePicker");
-                } else {
-                }
-            }
-        });
-
-        mAgreeCheck = (CheckBox) findViewById(R.id.agree_check);
-
-        mProgressView = findViewById(R.id.sign_up_progress);
-        mSignUpButton = (Button) findViewById(R.id.sign_up_button);
-
-        mSexError = (TextView) findViewById(R.id.sex_error_display);
-    }
-
-    public void chooseMale(View v) {
-        mSexError.setError(null);
-        sex = "male";
-    }
-
-    public void chooseFemale(View v) {
-        mSexError.setError(null);
-        sex = "female";
-    }
-
-    public void signUp(View v) {
-        if (mAuthTask != null) {
-            return;
-        }
-
-        // Reset errors.
-        mPassword.setError(null);
-        mNickname.setError(null);
-        mBirthday.setError(null);
-        mSexError.setError(null);
-        mAgreeCheck.setError(null);
-
-        // Store values at the time of the sign up attempt.
-        String phone = "";
-        String verifyCode = "";
-
-        String password = mPassword.getText().toString();
-        String nickname = mNickname.getText().toString();
-        String birthday = mBirthday.getText().toString();
-
-        boolean cancel = false;
-        View focusView = null;
-
-        // Check for a valid password.
-        if (TextUtils.isEmpty(password) || !isPasswordValid(password)) {
-            mPassword.setError(getString(R.string.error_invalid_password));
-            focusView = mPassword;
-            cancel = true;
-        }
-
-        // Check for a valid nickname.
-        if (TextUtils.isEmpty(nickname)) {
-            mNickname.setError(getString(R.string.error_field_required));
-            focusView = mNickname;
-            cancel = true;
-        }
-
-        if (TextUtils.isEmpty(birthday)) {
-            mBirthday.setError(getString(R.string.error_field_required));
-            focusView = mBirthday;
-            cancel = true;
-        } else if (!isValidDate(birthday)){
-            mBirthday.setError(getString(R.string.error_date_format));
-            focusView = mBirthday;
-            cancel = true;
-        }
-
-        if (sex == "none") {
-            mSexError.setError(getString(R.string.error_field_required));
-            focusView = mSexError;
-            cancel = true;
-        }
-
-        if (!agree) {
-            mAgreeCheck.setError(getString(R.string.please_agree));
-            focusView = mAgreeCheck;
-            cancel = true;
-        }
-
-        if (cancel) {
-            // There was an error; don't attempt login and focus the first
-            // form field with an error.
-            focusView.requestFocus();
-        } else {
-            // Show a progress spinner, and kick off a background task to
-            // perform the user login attempt.
-            showProgress(true);
-            mAuthTask = new UserSignUpTask(phone, verifyCode, password, nickname, birthday, sex);
-            mAuthTask.execute((Void) null);
-        }
-    }
-
-    public class UserSignUpTask extends AsyncTask<Void, Void, Boolean> {
-
-        private final String phone;
-        private final String verifyCode;
-        private final String password;
-        private final String nickname;
-        private final String birthday;
-        private final String sex;
-
-        UserSignUpTask(String phone, String verifyCode, String password, String nickname, String birthday, String sex) {
-            this.phone = phone;
-            this.verifyCode = verifyCode;
-            this.password = password;
-            this.nickname = nickname;
-            this.birthday = birthday;
-            this.sex = sex;
-        }
-
-        @Override
-        protected Boolean doInBackground(Void... params) {
-            // TODO: attempt authentication against a network service.
-
-            try {
-                // Simulate network access.
-                Thread.sleep(2000);
-            } catch (InterruptedException e) {
-                return false;
-            }
-
-            // TODO: register the new account here.
-            return true;
-        }
-
-        @Override
-        protected void onPostExecute(final Boolean success) {
-            mAuthTask = null;
-            showProgress(false);
-
-            if (success) {
-                //finish();
-            } else {
-//                mPasswordView.setError(getString(R.string.error_incorrect_password));
-//                mPasswordView.requestFocus();
-            }
-        }
-
-        @Override
-        protected void onCancelled() {
-            mAuthTask = null;
-            showProgress(false);
-        }
-    }
-
-    private void showProgress(final boolean show) {
-        mProgressView.setVisibility(show ? View.VISIBLE : View.INVISIBLE);
-        mSignUpButton.setEnabled(show ? false : true);
-    }
-
-    public void clickAgree(View v) {
-        mAgreeCheck.setError(null);
-        agree = mAgreeCheck.isChecked();
-        Log.v("ppLog", "" + agree);
-    }
-
-    private boolean isPasswordValid(String password) {
-        Log.v("ppLog", password + "," + password.length());
-        return password.length() >= 6;
-    }
-
-    private boolean isValidDate(String inDate) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        dateFormat.setLenient(false);
-        try {
-            dateFormat.parse(inDate.trim());
-        } catch (ParseException pe) {
-            return false;
-        }
-        return true;
     }
 }

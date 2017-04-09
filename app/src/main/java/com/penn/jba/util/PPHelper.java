@@ -9,6 +9,8 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.penn.jba.R;
 
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.regex.Pattern;
 
 /**
@@ -41,6 +43,16 @@ public class PPHelper {
         return error;
     }
 
+    public static String isNicknameValid(Context context, String nickname) {
+        String error = "";
+        if (TextUtils.isEmpty(nickname)) {
+            error = context.getString(R.string.error_field_required);
+        } else if (!Pattern.matches("\\w{3,12}", nickname.toString())) {
+            error = context.getString(R.string.error_invalid_nickname);
+        }
+
+        return error;
+    }
 
     public static String isVerifyCodeValid(Context context, String verifyCode) {
         String error = "";
@@ -48,6 +60,34 @@ public class PPHelper {
             error = context.getString(R.string.error_field_required);
         } else if (!Pattern.matches("\\d{6}", verifyCode)) {
             error = context.getString(R.string.error_invalid_verify_code);
+        }
+
+        return error;
+    }
+
+    public static boolean isValidDate(String inDate) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        dateFormat.setLenient(false);
+        try {
+            dateFormat.parse(inDate.trim());
+        } catch (ParseException pe) {
+            return false;
+        }
+        return true;
+    }
+
+    public static String isBirthdayValid(Context context, String birthday) {
+        String error = "";
+        if (TextUtils.isEmpty(birthday)) {
+            error = context.getString(R.string.error_field_required);
+        } else {
+            SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+            dateFormat.setLenient(false);
+            try {
+                dateFormat.parse(birthday.trim());
+            } catch (ParseException pe) {
+                error = context.getString(R.string.error_invalid_birthday);
+            }
         }
 
         return error;

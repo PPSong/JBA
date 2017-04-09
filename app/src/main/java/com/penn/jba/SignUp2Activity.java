@@ -337,6 +337,8 @@ public class SignUp2Activity extends AppCompatActivity {
 
                                 if (PPHelper.ppFromString(s, "data.flag").getAsInt() == 1) {
                                     Intent intent = new Intent(activityContext, SignUp3Activity.class);
+                                    intent.putExtra("phone", phone);
+                                    intent.putExtra("verifyCode", binding.verifyCodeInput.getText().toString());
                                     startActivity(intent);
                                 } else {
                                     Toast.makeText(activityContext, getString(R.string.error_verify_code), Toast.LENGTH_SHORT).show();

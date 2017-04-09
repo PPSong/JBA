@@ -44,7 +44,9 @@
         <activity
             android:name=".SignUp3Activity"
             android:label="@string/finish_sign_up"
-            android:parentActivityName=".SignUp2Activity"></activity>
+            android:launchMode="singleTask"
+            android:parentActivityName=".SignUp2Activity">
+        </activity>
     </application>
 
 </manifest>

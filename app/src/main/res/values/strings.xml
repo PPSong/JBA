@@ -41,5 +41,8 @@
     <string name="reset_password_ok">密码重置成功</string>
     <string name="error_verify_code">验证码错误</string>
     <string name="account_existed">账户已存在</string>
+    <string name="error_invalid_nickname">昵称需要3-12个字符</string>
+    <string name="error_invalid_birthday">出生日期有误</string>
+    <string name="must_agree">请同意守则</string>
 
 </resources>
