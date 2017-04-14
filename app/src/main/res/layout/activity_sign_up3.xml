@@ -8,6 +8,7 @@
         <variable
             name="presenter"
             type="com.penn.jba.SignUp3Activity" />
+
     </data>
 
     <LinearLayout

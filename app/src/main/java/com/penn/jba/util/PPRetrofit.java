@@ -28,6 +28,7 @@ public class PPRetrofit
     private static final String BASE_URL = "http://jbapp.magicfish.cn/";
     //private static final String BASE_URL = "http://192.168.1.9:3000";
     private static PPRetrofit ppRetrofit = new PPRetrofit();
+    public static String authBody;
     private PPJBService ppJBService;
 
     public PPRetrofit() {
@@ -51,6 +52,7 @@ public class PPRetrofit
             request = new JSONObject()
                     .put("method", apiName)
                     .put("data", jBody)
+                    .put("auth", authBody)
                     .toString();
         } catch (JSONException e) {
             Log.v("ppLog", "api data error:" + e);

@@ -13,13 +13,20 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.facebook.stetho.Stetho;
 import com.jakewharton.rxbinding2.view.RxView;
 import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.penn.jba.databinding.ActivityLoginBinding;
+import com.penn.jba.realm.model.CurrentUser;
+import com.penn.jba.realm.model.CurrentUserSetting;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPJSONObject;
 import com.penn.jba.util.PPRetrofit;
 import com.penn.jba.util.PPWarn;
+import com.uphyca.stetho_realm.RealmInspectorModulesProvider;
+
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
@@ -33,10 +40,14 @@ import io.reactivex.functions.Function;
 import io.reactivex.functions.Function3;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
+import io.realm.Realm;
+import io.realm.RealmConfiguration;
+
+import static com.penn.jba.util.PPRetrofit.authBody;
 
 public class LoginActivity extends AppCompatActivity {
     private Context activityContext;
-    
+
     private ActivityLoginBinding binding;
 
     private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
@@ -48,7 +59,7 @@ public class LoginActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         activityContext = this;
-        
+
         binding = DataBindingUtil.setContentView(this, R.layout.activity_login);
         binding.setPresenter(this);
 
@@ -79,15 +90,61 @@ public class LoginActivity extends AppCompatActivity {
 
     @Override
     protected void onNewIntent(Intent intent) {
-        if (intent.getBooleanExtra("needAutoLogin", false)) {
-            Intent intent1 = new Intent(this, TabsActivity.class);
-            startActivity(intent1);
+        String signInResult = intent.getStringExtra("signInResult");
+        if (signInResult != null) {
+            signInOk(signInResult);
         } else {
 
         }
     }
 
-    protected void setup() {
+    private void signInOk(String signInResult) {
+        String phone = PPHelper.ppFromString(signInResult, "data.extra.0").getAsString();
+        PPHelper.initRealm(this, phone);
+        try (Realm realm = Realm.getDefaultInstance()) {
+            realm.beginTransaction();
+
+            CurrentUser currentUser = realm.where(CurrentUser.class)
+                    .findFirst();
+
+            CurrentUserSetting currentUserSetting;
+
+            if (currentUser == null) {
+                //新注册用户或者首次在本手机使用
+                currentUser = realm.createObject(CurrentUser.class);
+                //默认在足迹页面不是显示我的moment
+                currentUserSetting = realm.createObject(CurrentUserSetting.class);
+                currentUserSetting.setFootprintMine(false);
+            }
+
+            currentUser.setUserId(PPHelper.ppFromString(signInResult, "data.userid").getAsString());
+            currentUser.setToken(PPHelper.ppFromString(signInResult, "data.token").getAsString());
+            currentUser.setTokenTimestamp(PPHelper.ppFromString(signInResult, "data.tokentimestamp").getAsLong());
+            currentUser.setPhone(phone);
+            currentUser.setNickname(PPHelper.ppFromString(signInResult, "data.extra.1").getAsString());
+            currentUser.setGender(PPHelper.ppFromString(signInResult, "data.extra.2").getAsInt());
+            currentUser.setBirthday(PPHelper.ppFromString(signInResult, "data.extra.5").getAsLong());
+
+            realm.commitTransaction();
+
+            //设置PPRetrofit authBody
+            try {
+                String authBody = new JSONObject()
+                        .put("userid", currentUser.getUserId())
+                        .put("token", currentUser.getToken())
+                        .put("tokentimestamp", currentUser.getTokenTimestamp())
+                        .toString();
+                PPRetrofit.authBody = authBody;
+            } catch (JSONException e) {
+                Log.v("ppLog", "api data error:" + e);
+            }
+        }
+
+        Intent intent1 = new Intent(this, TabsActivity.class);
+        startActivity(intent1);
+    }
+
+    private void setup() {
         //先发送个初始事件,便于判断按钮是否可用
         jobProcessing.onNext(false);
 
@@ -202,6 +259,8 @@ public class LoginActivity extends AppCompatActivity {
                                     Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
                                     return;
                                 }
+
+                                signInOk(s);
                             }
                         },
                         new Consumer<Throwable>() {

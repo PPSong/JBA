@@ -45,4 +45,11 @@
     <string name="error_invalid_birthday">出生日期有误</string>
     <string name="must_agree">请同意守则</string>
 
+    <!-- TODO: Remove or change this placeholder text -->
+    <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="footprint">足迹</string>
+    <string name="nearby">迹伴</string>
+    <string name="logout">注销</string>
+    <string name="mine">我的</string>
+
 </resources>

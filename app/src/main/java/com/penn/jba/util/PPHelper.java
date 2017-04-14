@@ -1,17 +1,23 @@
 package com.penn.jba.util;
 
+import android.app.Activity;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
+import com.facebook.stetho.Stetho;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonParser;
 import com.penn.jba.R;
+import com.uphyca.stetho_realm.RealmInspectorModulesProvider;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.regex.Pattern;
+
+import io.realm.Realm;
+import io.realm.RealmConfiguration;
 
 /**
  * Created by penn on 02/04/2017.
@@ -20,6 +26,23 @@ import java.util.regex.Pattern;
 public class PPHelper {
     //秒
     public static final int REQUEST_VERIFY_CODE_INTERVAL = 5;
+
+    public static void initRealm(Context context, String phone) {
+        Realm.init(context);
+        RealmConfiguration config = new RealmConfiguration.Builder()
+                .name(phone + ".realm")
+                .build();
+        //清除当前用户的数据文件, 测试用
+        //Realm.deleteRealm(config);
+
+        Realm.setDefaultConfiguration(config);
+
+        Stetho.initialize(
+                Stetho.newInitializerBuilder(context)
+                        .enableDumpapp(Stetho.defaultDumperPluginsProvider(context))
+                        .enableWebKitInspector(RealmInspectorModulesProvider.builder(context).build())
+                        .build());
+    }
 
     public static String isPhoneValid(Context context, String phone) {
         String error = "";

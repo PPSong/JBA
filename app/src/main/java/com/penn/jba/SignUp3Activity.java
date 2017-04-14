@@ -10,6 +10,7 @@ import java.util.Calendar;
 import java.util.concurrent.TimeUnit;
 
 import android.content.Context;
+import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.os.AsyncTask;
 import android.support.v4.app.DialogFragment;
@@ -32,12 +33,17 @@ import com.jakewharton.rxbinding2.widget.RxRadioGroup;
 import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.penn.jba.databinding.ActivitySignUp2Binding;
 import com.penn.jba.databinding.ActivitySignUp3Binding;
+import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPJSONObject;
 import com.penn.jba.util.PPRetrofit;
 import com.penn.jba.util.PPWarn;
 
+import org.reactivestreams.Subscriber;
+import org.reactivestreams.Subscription;
+
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.BiFunction;
@@ -48,6 +54,7 @@ import io.reactivex.functions.Function4;
 import io.reactivex.functions.Function6;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
+import io.realm.Realm;
 
 import static com.penn.jba.util.PPHelper.isValidDate;
 
@@ -55,6 +62,8 @@ public class SignUp3Activity extends AppCompatActivity {
     private Context activityContext;
 
     private static ActivitySignUp3Binding binding;
+
+    private Realm realm;
 
     private String phone;
 
@@ -349,13 +358,17 @@ public class SignUp3Activity extends AppCompatActivity {
 
     public void signUp() {
         jobProcessing.onNext(true);
+
+        final String tmpPhone = phone;
+        final String tmpPassword = binding.passwordInput.getText().toString();
+
         PPJSONObject jBody = new PPJSONObject();
 
         int sex = binding.sexInput.getCheckedRadioButtonId() == R.id.male_radio ? 1 : 2;
 
         jBody
-                .put("phone", phone)
-                .put("pwd", binding.passwordInput.getText().toString())
+                .put("phone", tmpPhone)
+                .put("pwd", tmpPassword)
                 .put("gender", sex)
                 .put("checkCode", verifyCode)
                 .put("nickname", binding.nicknameInput.getText().toString())
@@ -364,6 +377,30 @@ public class SignUp3Activity extends AppCompatActivity {
         final Observable<String> apiResult = PPRetrofit.getInstance().api("user.register", jBody.getJSONObject());
         apiResult
                 .subscribeOn(Schedulers.io())
+                .observeOn(Schedulers.io())
+                .flatMap(
+                        new Function<String, Observable<String>>() {
+                            @Override
+                            public Observable<String> apply(String s) throws Exception {
+                                Log.v("ppLog", "pp test:" + s);
+
+                                //如果有错误通过throw new Exception传递到subscribe的onError
+                                PPWarn ppWarn = PPHelper.ppWarning(s);
+                                if (ppWarn != null) {
+                                    throw new Exception(ppWarn.msg);
+                                }
+
+                                PPJSONObject jBody = new PPJSONObject();
+
+                                jBody
+                                        .put("phone", tmpPhone)
+                                        .put("pwd", tmpPassword);
+
+                                final Observable<String> apiResult = PPRetrofit.getInstance().api("user.login", jBody.getJSONObject());
+                                return apiResult;
+                            }
+                        }
+                )
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         new Consumer<String>() {
@@ -377,8 +414,7 @@ public class SignUp3Activity extends AppCompatActivity {
                                     return;
                                 }
 
-                                String nickname = PPHelper.ppFromString(s, "data.nickname").getAsString();
-                                binding.nicknameInput.setText(nickname);
+                                loginOK(s);
                             }
                         },
                         new Consumer<Throwable>() {
@@ -386,7 +422,7 @@ public class SignUp3Activity extends AppCompatActivity {
                                 jobProcessing.onNext(false);
 
                                 Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                Log.v("ppLog", "error:" + t1.toString());
+                                Log.v("ppLog", "pp error:" + t1.toString());
                                 t1.printStackTrace();
                             }
                         }
@@ -395,6 +431,11 @@ public class SignUp3Activity extends AppCompatActivity {
     }
 
     //-----helper-----
+    private void loginOK(String result) {
+        Intent intent = new Intent(activityContext, LoginActivity.class);
+        intent.putExtra("signInResult", result);
+        startActivity(intent);
+    }
 
     public static class DatePickerFragment extends DialogFragment
             implements DatePickerDialog.OnDateSetListener {
