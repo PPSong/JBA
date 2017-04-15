@@ -100,7 +100,7 @@ public class LoginActivity extends AppCompatActivity {
 
     private void signInOk(String signInResult) {
         String phone = PPHelper.ppFromString(signInResult, "data.extra.0").getAsString();
-        PPHelper.initRealm(this, phone);
+        PPHelper.initRealm(this, phone, false);
         try (Realm realm = Realm.getDefaultInstance()) {
             realm.beginTransaction();
 

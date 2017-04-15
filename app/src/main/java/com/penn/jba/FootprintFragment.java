@@ -24,6 +24,7 @@ import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.penn.jba.databinding.ActivityLoginBinding;
+import com.penn.jba.databinding.ActivityTabsBinding;
 import com.penn.jba.databinding.FragmentFootprintBinding;
 import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.realm.model.CurrentUserSetting;
@@ -69,7 +70,14 @@ import static com.penn.jba.util.PPHelper.ppFromString;
 public class FootprintFragment extends Fragment {
     private Context activityContext;
 
+    private FragmentFootprintBinding binding;
+
+    private FragmentPagerAdapter adapterViewPager;
+
     private Menu menu;
+
+
+
 
     private Realm realm;
 
@@ -82,8 +90,6 @@ public class FootprintFragment extends Fragment {
     private FootprintAllAdapter footprintAllAdapter;
 
     private OnFragmentInteractionListener mListener;
-
-    private FragmentFootprintBinding binding;
 
     // private AllPPRefreshLoadController allPPRefreshLoadController;
 
@@ -103,12 +109,10 @@ public class FootprintFragment extends Fragment {
         super.onCreate(savedInstanceState);
         activityContext = getActivity();
         setHasOptionsMenu(true);
-        Log.v("ppLog", "fragment onCreate");
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
-        Log.v("ppLog", "onCreateOptionsMenu");
         inflater.inflate(R.menu.footprint_option, menu);
         this.menu = menu;
         toggleMyMoment(false);
@@ -123,7 +127,6 @@ public class FootprintFragment extends Fragment {
                 toggleMyMoment(true);
 
                 return true;
-
             default:
                 break;
         }
@@ -142,17 +145,15 @@ public class FootprintFragment extends Fragment {
             if (change) {
                 //更新当前用户的setting
                 currentUserSetting.setFootprintMine(!currentUserSetting.isFootprintMine());
-                //refreshFootprintMine("", "");
             }
 
+            Log.v("pplog6", "isFootprintMine:" + currentUserSetting.isFootprintMine());
             if (currentUserSetting.isFootprintMine()) {
                 menu.getItem(0).setIcon(R.drawable.ic_photo_black_24dp);
-                binding.mySwipeRefreshLayout.setVisibility(View.VISIBLE);
-                binding.allSwipeRefreshLayout.setVisibility(View.INVISIBLE);
+                binding.mainViewPager.setCurrentItem(0);
             } else {
                 menu.getItem(0).setIcon(R.drawable.ic_photo_library_black_24dp);
-                binding.allSwipeRefreshLayout.setVisibility(View.VISIBLE);
-                binding.mySwipeRefreshLayout.setVisibility(View.INVISIBLE);
+                binding.mainViewPager.setCurrentItem(1);
             }
 
             realm.commitTransaction();
@@ -166,19 +167,21 @@ public class FootprintFragment extends Fragment {
         View view = binding.getRoot();
         binding.setPresenter(this);
 
-        realm = Realm.getDefaultInstance();
-        footprintMines = realm.where(FootprintMine.class).findAllSorted("createTime", Sort.DESCENDING);
-        footprintMines.addChangeListener(changeListener);
+        adapterViewPager = new MyPagerAdapter(getChildFragmentManager());
+        binding.mainViewPager.setAdapter(adapterViewPager);
+//        realm = Realm.getDefaultInstance();
+//        footprintMines = realm.where(FootprintMine.class).findAllSorted("createTime", Sort.DESCENDING);
+//        footprintMines.addChangeListener(changeListener);
 
 //        binding.allRv.setLayoutManager(new LinearLayoutManager(getActivity()));
 //        footprintAllAdapter = new FootprintAllAdapter(footprintAlls);
 //        binding.allRv.setAdapter(footprintAllAdapter);
 //        allPPRefreshLoadController = new AllPPRefreshLoadController(binding.allSwipeRefreshLayout, binding.allRv);
 
-        binding.myRv.setLayoutManager(new LinearLayoutManager(getActivity()));
-        footprintMineAdapter = new FootprintMineAdapter(footprintMines);
-        binding.myRv.setAdapter(footprintMineAdapter);
-        minePPRefreshLoadController = new MinePPRefreshLoadController(binding.mySwipeRefreshLayout, binding.myRv);
+//        binding.myRv.setLayoutManager(new LinearLayoutManager(getActivity()));
+//        footprintMineAdapter = new FootprintMineAdapter(footprintMines);
+//        binding.myRv.setAdapter(footprintMineAdapter);
+//        minePPRefreshLoadController = new MinePPRefreshLoadController(binding.mySwipeRefreshLayout, binding.myRv);
 
         return view;
     }
@@ -186,13 +189,7 @@ public class FootprintFragment extends Fragment {
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        realm.close();
-    }
-
-    public void onButtonPressed(Uri uri) {
-        if (mListener != null) {
-            mListener.onFragmentInteraction(uri);
-        }
+        //realm.close();
     }
 
     @Override
@@ -435,6 +432,46 @@ public class FootprintFragment extends Fragment {
                                 }
                             }
                     );
+        }
+    }
+
+    public class MyPagerAdapter extends FragmentPagerAdapter {
+        private final int NUM_ITEMS = 2;
+
+        public MyPagerAdapter(FragmentManager fragmentManager) {
+            super(fragmentManager);
+        }
+
+        // Returns total number of pages
+        @Override
+        public int getCount() {
+            return NUM_ITEMS;
+        }
+
+        // Returns the fragment to display for that page
+        @Override
+        public Fragment getItem(int position) {
+            switch (position) {
+                case 0: // Fragment # 0 - This will show FirstFragment
+                    return FootprintAllFragment.newInstance();
+                case 1: // Fragment # 0 - This will show FirstFragment different title
+                    return FootprintMineFragment.newInstance();
+                default:
+                    return null;
+            }
+        }
+
+        // Returns the page title for the top indicator
+        @Override
+        public CharSequence getPageTitle(int position) {
+            switch (position) {
+                case 0: // Fragment # 0 - This will show FirstFragment
+                    return getResources().getString(R.string.all);
+                case 1: // Fragment # 0 - This will show FirstFragment different title
+                    return getResources().getString(R.string.mine);
+                default:
+                    return "";
+            }
         }
     }
 }

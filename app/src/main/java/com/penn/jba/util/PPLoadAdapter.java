@@ -38,13 +38,9 @@ public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
 
     @Override
     public int getItemViewType(int position) {
-        Log.v("pplog3", "size:" + data.size());
-       // T tmp = data.get(position);
         if (position < data.size()) {
-            Log.v("pplog3", "normal," + position);
             return getRealItemViewType(data.get(position));
         } else {
-            Log.v("pplog34", "load more cell," + position);
             return VIEW_PROG;
         }
     }
@@ -85,7 +81,6 @@ public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
         if (loadMoreCell) {
             i = i + 1;
         }
-        Log.v("pplog3", "i:" + i);
         return i;
     }
 

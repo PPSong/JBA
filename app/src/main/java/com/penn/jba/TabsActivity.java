@@ -37,6 +37,14 @@ import com.penn.jba.util.PPRetrofit;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.util.ArrayList;
+
+import io.reactivex.Observable;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.functions.Consumer;
+import io.reactivex.schedulers.Schedulers;
 import io.realm.Realm;
 
 public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerItemClickListener, FootprintFragment.OnFragmentInteractionListener, NearbyFragment.OnFragmentInteractionListener {
@@ -44,44 +52,50 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
 
     private ActivityTabsBinding binding;
 
+    private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
+
     private FragmentPagerAdapter adapterViewPager;
 
     private Drawer drawerResult;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        //pptodo remove this testing entry
-//        PPHelper.initRealm(this, "18602103868");
-//        try (Realm realm = Realm.getDefaultInstance()) {
-//
-//            CurrentUser currentUser = realm.where(CurrentUser.class)
-//                    .findFirst();
-//
-//            //设置PPRetrofit authBody
-//            try {
-//                String authBody = new JSONObject()
-//                        .put("userid", currentUser.getUserId())
-//                        .put("token", currentUser.getToken())
-//                        .put("tokentimestamp", currentUser.getTokenTimestamp())
-//                        .toString();
-//                PPRetrofit.authBody = authBody;
-//            } catch (JSONException e) {
-//                Log.v("ppLog", "api data error:" + e);
-//            }
-//        }
-
         super.onCreate(savedInstanceState);
+
+        //pptodo remove this testing entry
+        if (true) {
+            disposableList.add(PPHelper.testingInit
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                            new Consumer<Boolean>() {
+                                @Override
+                                public void accept(Boolean aBoolean) throws Exception {
+                                    setup();
+                                }
+                            }
+                    )
+            );
+            PPHelper.ppTestInit(this, "18602103868", "123456", false);
+            return;
+        }
+        //pptodo end remove this testing entry
+
+        setup();
+    }
+
+    private void setup() {
         activityContext = this;
 
         binding = DataBindingUtil.setContentView(this, R.layout.activity_tabs);
         binding.setPresenter(this);
+
 
         adapterViewPager = new MyPagerAdapter(getSupportFragmentManager());
         binding.mainViewPager.setAdapter(adapterViewPager);
 
         binding.mainViewPager.setSwipeable(false);
         binding.mainViewPager.setCurrentItem(0);
-        Log.v("ppLog", "getPageTitle:" + adapterViewPager.getPageTitle(0));
         binding.toolbar.setTitle(adapterViewPager.getPageTitle(0));
 
         setSupportActionBar(binding.toolbar);
@@ -122,6 +136,16 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                 .build();
 
         drawerResult.addStickyFooterItem(item0);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        for (Disposable d : disposableList) {
+            if (!d.isDisposed()) {
+                d.dispose();
+            }
+        }
     }
 
     @Override

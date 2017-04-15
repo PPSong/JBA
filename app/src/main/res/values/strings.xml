@@ -51,5 +51,6 @@
     <string name="nearby">迹伴</string>
     <string name="logout">注销</string>
     <string name="mine">我的</string>
+    <string name="all">所有</string>
 
 </resources>

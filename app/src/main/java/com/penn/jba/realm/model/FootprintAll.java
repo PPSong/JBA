@@ -29,11 +29,11 @@ public class FootprintAll extends RealmObject {
         this.createTime = createTime;
     }
 
-    public int getId() {
+    public String getId() {
         return id;
     }
 
-    public void setId(int id) {
+    public void setId(String id) {
         this.id = id;
     }
 
@@ -53,7 +53,7 @@ public class FootprintAll extends RealmObject {
         this.body = body;
     }
 
-    private int id;
+    private String id;
 
     private String status; //local, net, failed
 

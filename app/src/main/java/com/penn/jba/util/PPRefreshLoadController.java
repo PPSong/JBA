@@ -12,6 +12,7 @@ import android.util.Log;
 
 public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRefreshListener {
     private boolean loading = false;
+    private boolean noMore = false;
 
     private int visibleThreshold = 5;
     private int lastVisibleItem, totalItemCount;
@@ -41,27 +42,11 @@ public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRe
                             lastVisibleItem = linearLayoutManager
                                     .findLastVisibleItemPosition();
 
-                            if (!loading && totalItemCount <= (lastVisibleItem + visibleThreshold)) {
+                            if (!noMore && !loading && totalItemCount <= (lastVisibleItem + visibleThreshold)) {
                                 // End has been reached
                                 // Do something
+                                Log.v("pplog", "totalItemCount:" + totalItemCount + ",lastVisibleItem:" + lastVisibleItem + ",visibleThreshold:" + visibleThreshold);
                                 loadMore(recyclerView);
-//                                ((PPLoadAdapter)(recyclerView.getAdapter())).needLoadMoreCell();
-//                                recyclerView.post(new Runnable() {
-//                                    public void run() {
-//                                        ((PPLoadAdapter)(recyclerView.getAdapter())).notifyItemInserted(((PPLoadAdapter)(recyclerView.getAdapter())).data.size());
-//                                    }
-//                                });
-//
-//
-//                                new Handler().postDelayed(new Runnable() {
-//                                                              @Override
-//                                                              public void run() {
-//                                                                  ((PPLoadAdapter)(recyclerView.getAdapter())).cancelLoadMoreCell();
-//                                                                  ((PPLoadAdapter)(recyclerView.getAdapter())).notifyItemRemoved(((PPLoadAdapter)(recyclerView.getAdapter())).data.size());
-//                                                                    end();
-//                                                              }
-//                                                          },2000
-//                                );
                             }
 
                         }
@@ -77,18 +62,22 @@ public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRe
         this.loading = false;
     }
 
+    public void reset() {
+        noMore = false;
+    }
+
+    public void noMore() {
+        noMore = true;
+    }
+
     public abstract void doRefresh();
 
     @Override
     public void onRefresh() {
-        Log.v("pplog5", "onRefresh:" + loading);
         if (!loading) {
             begin();
-            Log.v("pplog5", "onRefresh1:" + loading);
             doRefresh();
-            Log.v("pplog5", "onRefresh2:" + loading);
         } else {
-            Log.v("pplog5", "do nothing");
             swipeRefreshLayout.setRefreshing(false);
         }
     }
