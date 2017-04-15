@@ -33,7 +33,7 @@ public class PPHelper {
                 .name(phone + ".realm")
                 .build();
         //清除当前用户的数据文件, 测试用
-        //Realm.deleteRealm(config);
+        Realm.deleteRealm(config);
 
         Realm.setDefaultConfiguration(config);
 

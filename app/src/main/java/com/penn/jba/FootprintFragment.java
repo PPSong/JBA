@@ -51,6 +51,7 @@ import io.realm.OrderedCollectionChangeSet;
 import io.realm.OrderedRealmCollectionChangeListener;
 import io.realm.Realm;
 import io.realm.RealmResults;
+import io.realm.Sort;
 
 import static android.R.attr.data;
 import static android.R.attr.process;
@@ -146,12 +147,12 @@ public class FootprintFragment extends Fragment {
 
             if (currentUserSetting.isFootprintMine()) {
                 menu.getItem(0).setIcon(R.drawable.ic_photo_black_24dp);
-                binding.myRv.setVisibility(View.VISIBLE);
-                //binding.allRv.setVisibility(View.INVISIBLE);
+                binding.mySwipeRefreshLayout.setVisibility(View.VISIBLE);
+                binding.allSwipeRefreshLayout.setVisibility(View.INVISIBLE);
             } else {
                 menu.getItem(0).setIcon(R.drawable.ic_photo_library_black_24dp);
-                //binding.allRv.setVisibility(View.VISIBLE);
-                binding.myRv.setVisibility(View.INVISIBLE);
+                binding.allSwipeRefreshLayout.setVisibility(View.VISIBLE);
+                binding.mySwipeRefreshLayout.setVisibility(View.INVISIBLE);
             }
 
             realm.commitTransaction();
@@ -166,7 +167,7 @@ public class FootprintFragment extends Fragment {
         binding.setPresenter(this);
 
         realm = Realm.getDefaultInstance();
-        footprintMines = realm.where(FootprintMine.class).findAll();
+        footprintMines = realm.where(FootprintMine.class).findAllSorted("createTime", Sort.DESCENDING);
         footprintMines.addChangeListener(changeListener);
 
 //        binding.allRv.setLayoutManager(new LinearLayoutManager(getActivity()));
@@ -238,7 +239,7 @@ public class FootprintFragment extends Fragment {
                                 }
 
                                 //signInOk(s);
-                                processFootprintMine(s);
+                                processFootprintMine(s, true);
                             }
                         },
                         new Consumer<Throwable>() {
@@ -253,29 +254,29 @@ public class FootprintFragment extends Fragment {
                 );
     }
 
-    private void processFootprintMine(String s) {
+    private void processFootprintMine(String s, boolean refresh) {
         try (Realm realm = Realm.getDefaultInstance()) {
             realm.beginTransaction();
 
-            //remove old
-            realm.delete(FootprintMine.class);
+            if (refresh) {
+                realm.delete(FootprintMine.class);
+            }
 
             JsonArray ja = PPHelper.ppFromString(s, "data").getAsJsonArray();
 
             for (int i = 0; i < ja.size(); i++) {
 
-//                FootprintMine ftm = realm.where(FootprintMine.class)
-//                        .equalTo("hash", PPHelper.ppFromString(s, "data." + i + ".hash").getAsString())
-//                        .findFirst();
-//
-//                if (ftm == null) {
-//                    ftm = realm.createObject(FootprintMine.class, PPHelper.ppFromString(s, "data." + i + ".hash").getAsString());
-//                }
+                //防止loadmore是查询到已有的记录
+                FootprintMine ftm = realm.where(FootprintMine.class)
+                        .equalTo("hash", PPHelper.ppFromString(s, "data." + i + ".hash").getAsString())
+                        .findFirst();
 
-                FootprintMine ftm = realm.createObject(FootprintMine.class, PPHelper.ppFromString(s, "data." + i + ".hash").getAsString());
+                if (ftm == null) {
+                    ftm = realm.createObject(FootprintMine.class, PPHelper.ppFromString(s, "data." + i + ".hash").getAsString());
+                }
 
                 ftm.setCreateTime(PPHelper.ppFromString(s, "data." + i + ".createTime").getAsLong());
-                ftm.setCreateTime(PPHelper.ppFromString(s, "data." + i + ".id").getAsLong());
+                ftm.setId(PPHelper.ppFromString(s, "data." + i + ".id").getAsString());
                 ftm.setStatus("net");
                 ftm.setBody(PPHelper.ppFromString(s, "data." + i + "").getAsJsonObject().toString());
                 Log.v("pplog1", PPHelper.ppFromString(s, "data." + i + "").getAsJsonObject().toString());
@@ -368,7 +369,7 @@ public class FootprintFragment extends Fragment {
                                     }
 
                                     //signInOk(s);
-                                    processFootprintMine(s);
+                                    processFootprintMine(s, true);
                                     swipeRefreshLayout.setRefreshing(false);
                                     end();
                                     Log.v("ppLog2", "get result end:");
@@ -391,15 +392,49 @@ public class FootprintFragment extends Fragment {
 
         @Override
         public void doLoadMore() {
-            new Handler().postDelayed(new Runnable() {
-                @Override
-                public void run() {
-                    PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
-                    tmp.cancelLoadMoreCell();
-                    tmp.notifyItemRemoved(tmp.data.size());
-                    end();
-                }
-            }, 2000);
+            PPJSONObject jBody = new PPJSONObject();
+            jBody
+                    .put("beforeThan", "" + footprintMines.last().getHash())
+                    .put("afterThan", "");
+
+            final Observable<String> apiResult = PPRetrofit.getInstance().api("footprint.mine", jBody.getJSONObject());
+            apiResult
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(AndroidSchedulers.mainThread())
+                    .subscribe(
+                            new Consumer<String>() {
+                                public void accept(String s) {
+                                    Log.v("ppLog", "get result:" + s);
+
+                                    PPWarn ppWarn = PPHelper.ppWarning(s);
+                                    if (ppWarn != null) {
+                                        Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                        return;
+                                    }
+
+                                    processFootprintMine(s, false);
+
+                                    PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
+                                    tmp.cancelLoadMoreCell();
+                                    tmp.notifyItemRemoved(tmp.data.size());
+                                    end();
+                                }
+                            },
+                            new Consumer<Throwable>() {
+                                public void accept(Throwable t1) {
+                                    //jobProcessing.onNext(false);
+
+                                    Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                    Log.v("ppLog", "error:" + t1.toString());
+                                    t1.printStackTrace();
+
+                                    PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
+                                    tmp.cancelLoadMoreCell();
+                                    tmp.notifyItemRemoved(tmp.data.size());
+                                    end();
+                                }
+                            }
+                    );
         }
     }
 }

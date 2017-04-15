@@ -51,24 +51,24 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         //pptodo remove this testing entry
-        PPHelper.initRealm(this, "18602103868");
-        try (Realm realm = Realm.getDefaultInstance()) {
-
-            CurrentUser currentUser = realm.where(CurrentUser.class)
-                    .findFirst();
-
-            //设置PPRetrofit authBody
-            try {
-                String authBody = new JSONObject()
-                        .put("userid", currentUser.getUserId())
-                        .put("token", currentUser.getToken())
-                        .put("tokentimestamp", currentUser.getTokenTimestamp())
-                        .toString();
-                PPRetrofit.authBody = authBody;
-            } catch (JSONException e) {
-                Log.v("ppLog", "api data error:" + e);
-            }
-        }
+//        PPHelper.initRealm(this, "18602103868");
+//        try (Realm realm = Realm.getDefaultInstance()) {
+//
+//            CurrentUser currentUser = realm.where(CurrentUser.class)
+//                    .findFirst();
+//
+//            //设置PPRetrofit authBody
+//            try {
+//                String authBody = new JSONObject()
+//                        .put("userid", currentUser.getUserId())
+//                        .put("token", currentUser.getToken())
+//                        .put("tokentimestamp", currentUser.getTokenTimestamp())
+//                        .toString();
+//                PPRetrofit.authBody = authBody;
+//            } catch (JSONException e) {
+//                Log.v("ppLog", "api data error:" + e);
+//            }
+//        }
 
         super.onCreate(savedInstanceState);
         activityContext = this;

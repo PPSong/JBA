@@ -19,7 +19,11 @@
             android:name=".LoginActivity"
             android:label="@string/login"
             android:launchMode="singleTask">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
 
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
 
         </activity>
         <activity
@@ -29,11 +33,7 @@
         <activity
             android:name=".TabsActivity"
             android:label="@string/title_activity_tabs">
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
 
-                <category android:name="android.intent.category.LAUNCHER" />
-            </intent-filter>
 
         </activity>
         <activity

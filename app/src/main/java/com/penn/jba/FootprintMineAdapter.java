@@ -37,7 +37,7 @@ public class FootprintMineAdapter extends PPLoadAdapter<FootprintMine> {
 
     @Override
     public void onBindRealViewHolder(RecyclerView.ViewHolder holder, int position) {
-        ((PPViewHolder) holder).mainText.setText(data.get(position).getHash());
+        ((PPViewHolder) holder).mainText.setText("" + data.get(position).getCreateTime());
     }
 
     public static class PPViewHolder extends RecyclerView.ViewHolder {
