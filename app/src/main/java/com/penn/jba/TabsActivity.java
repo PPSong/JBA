@@ -47,7 +47,7 @@ import io.reactivex.functions.Consumer;
 import io.reactivex.schedulers.Schedulers;
 import io.realm.Realm;
 
-public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerItemClickListener, FootprintFragment.OnFragmentInteractionListener, NearbyFragment.OnFragmentInteractionListener {
+public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerItemClickListener {
     private Context activityContext;
 
     private ActivityTabsBinding binding;
@@ -149,11 +149,6 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
     }
 
     @Override
-    public void onFragmentInteraction(Uri uri) {
-
-    }
-
-    @Override
     public boolean onItemClick(View view, int position, IDrawerItem drawerItem) {
         Log.v("ppLog", "test:" + drawerItem.getIdentifier());
         switch ((int) drawerItem.getIdentifier()) {
@@ -162,13 +157,13 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                 break;
             case 1:
                 //足迹
-                binding.mainViewPager.setCurrentItem(0);
+                binding.mainViewPager.setCurrentItem(0, false);
                 binding.toolbar.setTitle(adapterViewPager.getPageTitle(0));
                 drawerResult.closeDrawer();
                 break;
             case 2:
                 //迹伴
-                binding.mainViewPager.setCurrentItem(1);
+                binding.mainViewPager.setCurrentItem(1, false);
                 binding.toolbar.setTitle(adapterViewPager.getPageTitle(1));
                 drawerResult.closeDrawer();
                 break;

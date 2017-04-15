@@ -111,7 +111,7 @@ public class FootprintMineFragment extends Fragment {
         }
     };
 
-    private void processFootprintMine(String s, boolean refresh) {
+    private int processFootprintMine(String s, boolean refresh) {
         try (Realm realm = Realm.getDefaultInstance()) {
             realm.beginTransaction();
 
@@ -121,7 +121,6 @@ public class FootprintMineFragment extends Fragment {
 
             JsonArray ja = PPHelper.ppFromString(s, "data").getAsJsonArray();
 
-            Log.v("pplog7", "" + ja.size());
             for (int i = 0; i < ja.size(); i++) {
 
                 //防止loadmore是查询到已有的记录
@@ -138,8 +137,9 @@ public class FootprintMineFragment extends Fragment {
                 ftm.setStatus("net");
                 ftm.setBody(PPHelper.ppFromString(s, "data." + i + "").getAsJsonObject().toString());
             }
-
             realm.commitTransaction();
+
+            return ja.size();
         }
     }
 
@@ -156,7 +156,7 @@ public class FootprintMineFragment extends Fragment {
                     .put("beforeThan", "")
                     .put("afterThan", "");
 
-            final Observable<String> apiResult = PPRetrofit.getInstance().api("footprint.mine", jBody.getJSONObject());
+            final Observable<String> apiResult = PPRetrofit.getInstance().api("footprint.myMoment", jBody.getJSONObject());
             apiResult
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
@@ -213,7 +213,9 @@ public class FootprintMineFragment extends Fragment {
                                         return;
                                     }
 
-                                    processFootprintMine(s, false);
+                                    if (processFootprintMine(s, false) == 0) {
+                                        noMore();
+                                    }
 
                                     PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
                                     tmp.cancelLoadMoreCell();
