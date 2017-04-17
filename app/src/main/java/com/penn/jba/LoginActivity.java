@@ -13,11 +13,14 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.jakewharton.rxbinding2.view.RxView;
 import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.penn.jba.databinding.ActivityLoginBinding;
 import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.realm.model.CurrentUserSetting;
+import com.penn.jba.realm.model.Pic;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPJSONObject;
 import com.penn.jba.util.PPRetrofit;
@@ -31,6 +34,7 @@ import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
 
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Consumer;
@@ -39,6 +43,9 @@ import io.reactivex.functions.Function3;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.realm.Realm;
+import io.realm.RealmList;
+
+import static com.penn.jba.util.PPRetrofit.authBody;
 
 public class LoginActivity extends AppCompatActivity {
     private Context activityContext;
@@ -87,7 +94,11 @@ public class LoginActivity extends AppCompatActivity {
     protected void onNewIntent(Intent intent) {
         String signInResult = intent.getStringExtra("signInResult");
         if (signInResult != null) {
-            signInOk(signInResult);
+            try {
+                signInOk(signInResult);
+            } catch (Exception e) {
+                PPHelper.showPPToast(this, "signInOk error:" + e, Toast.LENGTH_SHORT);
+            }
         } else {
         }
     }
@@ -225,9 +236,23 @@ public class LoginActivity extends AppCompatActivity {
                 .put("phone", binding.phoneInput.getText().toString())
                 .put("pwd", binding.passwordInput.getText().toString());
 
-        final Observable<String> apiResult = PPRetrofit.getInstance().api("user.login", jBody.getJSONObject());
-        apiResult
+        final Observable<String> apiResult1 = PPRetrofit.getInstance().api("user.login", jBody.getJSONObject());
+
+        apiResult1
                 .subscribeOn(Schedulers.io())
+                .flatMap(new Function<String, ObservableSource<String>>() {
+                    @Override
+                    public ObservableSource<String> apply(String s) throws Exception {
+                        PPWarn ppWarn = PPHelper.ppWarning(s);
+                        if (ppWarn != null) {
+                            throw new Exception(ppWarn.msg);
+                        }
+
+                        signInOk(s);
+
+                        return PPRetrofit.getInstance().api("user.startup", null);
+                    }
+                })
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         new Consumer<String>() {
@@ -242,7 +267,7 @@ public class LoginActivity extends AppCompatActivity {
                                     return;
                                 }
 
-                                signInOk(s);
+                                startUpOk(s);
                             }
                         },
                         new Consumer<Throwable>() {
@@ -257,9 +282,9 @@ public class LoginActivity extends AppCompatActivity {
     }
 
 
-    private void signInOk(String signInResult) {
-        String phone = PPHelper.ppFromString(signInResult, "data.extra.0").getAsString();
-        PPHelper.initRealm(this, phone, false);
+    private void signInOk(String s) throws Exception {
+        String phone = PPHelper.ppFromString(s, "data.extra.0").getAsString();
+        PPHelper.initRealm(activityContext, phone, false);
         try (Realm realm = Realm.getDefaultInstance()) {
             realm.beginTransaction();
 
@@ -276,27 +301,56 @@ public class LoginActivity extends AppCompatActivity {
                 currentUserSetting.setFootprintMine(false);
             }
 
-            currentUser.setUserId(PPHelper.ppFromString(signInResult, "data.userid").getAsString());
-            currentUser.setToken(PPHelper.ppFromString(signInResult, "data.token").getAsString());
-            currentUser.setTokenTimestamp(PPHelper.ppFromString(signInResult, "data.tokentimestamp").getAsLong());
-            currentUser.setPhone(phone);
-            currentUser.setNickname(PPHelper.ppFromString(signInResult, "data.extra.1").getAsString());
-            currentUser.setGender(PPHelper.ppFromString(signInResult, "data.extra.2").getAsInt());
-            currentUser.setBirthday(PPHelper.ppFromString(signInResult, "data.extra.5").getAsLong());
+            currentUser.setUserId(PPHelper.ppFromString(s, "data.userid").getAsString());
+            currentUser.setToken(PPHelper.ppFromString(s, "data.token").getAsString());
+            currentUser.setTokenTimestamp(PPHelper.ppFromString(s, "data.tokentimestamp").getAsLong());
 
             realm.commitTransaction();
 
             //设置PPRetrofit authBody
-            try {
-                String authBody = new JSONObject()
-                        .put("userid", currentUser.getUserId())
-                        .put("token", currentUser.getToken())
-                        .put("tokentimestamp", currentUser.getTokenTimestamp())
-                        .toString();
-                PPRetrofit.authBody = authBody;
-            } catch (JSONException e) {
-                Log.v("ppLog", "api data error:" + e);
+            String authBody = new JSONObject()
+                    .put("userid", currentUser.getUserId())
+                    .put("token", currentUser.getToken())
+                    .put("tokentimestamp", currentUser.getTokenTimestamp())
+                    .toString();
+            PPRetrofit.authBody = authBody;
+        }
+    }
+
+    private void startUpOk(String s) {
+        try (Realm realm = Realm.getDefaultInstance()) {
+            realm.beginTransaction();
+
+            CurrentUser currentUser = realm.where(CurrentUser.class)
+                    .findFirst();
+
+            currentUser.setPhone(PPHelper.ppFromString(s, "data.userInfo.phone").getAsString());
+            currentUser.setNickname(PPHelper.ppFromString(s, "data.userInfo.nickname").getAsString());
+            currentUser.setGender(PPHelper.ppFromString(s, "data.userInfo.gender").getAsInt());
+            currentUser.setBirthday(PPHelper.ppFromString(s, "data.userInfo.birthday").getAsLong());
+            currentUser.setHead(PPHelper.ppFromString(s, "data.userInfo.head").getAsString());
+            currentUser.setBaiduApiUrl(PPHelper.ppFromString(s, "data.settings.geo.api").getAsString());
+            currentUser.setBaiduAkBrowser(PPHelper.ppFromString(s, "data.settings.geo.ak_browser").getAsString());
+            currentUser.setSocketHost(PPHelper.ppFromString(s, "data.settings.socket.host").getAsString());
+            currentUser.setSocketPort(PPHelper.ppFromString(s, "data.settings.socket.port").getAsInt());
+            currentUser.setUnreadMessageMoment(PPHelper.ppFromString(s, "data.stats.message.moment").getAsInt());
+            currentUser.setUnreadMessageIndex(PPHelper.ppFromString(s, "data.stats.message.index").getAsInt());
+            currentUser.setUnreadMessageFriend(PPHelper.ppFromString(s, "data.stats.message.friend").getAsInt());
+            currentUser.setUnreadMessageSystem(PPHelper.ppFromString(s, "data.stats.message.system").getAsInt());
+            currentUser.setFollows(PPHelper.ppFromString(s, "data.stats.follows").getAsInt());
+            currentUser.setNewFriend(PPHelper.ppFromString(s, "data.stats.newFriend").getAsInt());
+            currentUser.setFans(PPHelper.ppFromString(s, "data.stats.fans").getAsInt());
+            currentUser.setNewFans(PPHelper.ppFromString(s, "data.stats.newFans").getAsInt());
+            currentUser.setImToken(PPHelper.ppFromString(s, "data.userInfo.params.im.token").getAsString());
+            currentUser.setImAppKey(PPHelper.ppFromString(s, "data.userInfo.params.im.appKey").getAsString());
+            //pptodo get im_unread_count_int
+            RealmList<Pic> pics = currentUser.getPics();
+            for (JsonElement item : PPHelper.ppFromString(s, "data.userInfo.params.more.pics").getAsJsonArray()) {
+                Pic pic = new Pic();
+                pic.setPath(item.toString());
+                pics.add(pic);
             }
+            realm.commitTransaction();
         }
 
         Intent intent1 = new Intent(this, TabsActivity.class);

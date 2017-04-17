@@ -14,6 +14,7 @@ import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
 import android.support.v4.view.PagerAdapter;
 import android.support.v7.app.AppCompatActivity;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
@@ -43,6 +44,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.zip.Inflater;
 
 import io.reactivex.Observable;
 import io.reactivex.ObservableOnSubscribe;
@@ -62,6 +64,10 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
     private FragmentPagerAdapter adapterViewPager;
 
     private Drawer drawerResult;
+
+    private AccountHeader headerResult;
+
+    private ProfileDrawerItem profileDrawerItem;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -161,13 +167,15 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
             }
         });
 
+        profileDrawerItem =  new ProfileDrawerItem();
+
         // Create the AccountHeader
-        AccountHeader headerResult = new AccountHeaderBuilder()
+        headerResult = new AccountHeaderBuilder()
                 .withActivity(this)
-                //.withHeaderBackground(R.drawable.header)
+                .withHeaderBackground(R.drawable.header)
                 .addProfiles(
                         //new ProfileDrawerItem().withName("Mike Penz").withIcon(R.drawable.profile)
-                        new ProfileDrawerItem().withName("Mike").withIcon("http://7xu8w0.com1.z0.glb.clouddn.com/147391088977946Y14C-1024x680.jpg?imageView2/1/w/80/h/80/interlace/1/")
+                        profileDrawerItem
                 )
                 .withOnAccountHeaderListener(new AccountHeader.OnAccountHeaderListener() {
                     @Override
@@ -191,6 +199,28 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                 .build();
 
         drawerResult.addStickyFooterItem(item0);
+        updateProfile();
+    }
+
+    private void updateProfile() {
+        try (Realm realm = Realm.getDefaultInstance()) {
+            CurrentUser currentUser = realm.where(CurrentUser.class).findFirst();
+            String avatar = currentUser.getHead();
+            if (TextUtils.isEmpty(avatar)) {
+                //pptodo 默认头像路径
+                avatar = "";
+            }
+            avatar = "http://7xu8w0.com1.z0.glb.clouddn.com/" + avatar + "?imageView2/1/w/80/h/80/interlace/1/";
+
+            String nickname = currentUser.getNickname();
+            int follows = currentUser.getFollows();
+            int fans = currentUser.getFans();
+
+            profileDrawerItem = profileDrawerItem.withIcon(avatar)
+                    .withName(nickname)
+                    .withEmail("Follows:" + follows + ", " + "Fans:" + fans);
+            headerResult.updateProfile(profileDrawerItem);
+        }
     }
 
     private class MyPagerAdapter extends FragmentPagerAdapter {

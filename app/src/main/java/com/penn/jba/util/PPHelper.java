@@ -312,7 +312,7 @@ public class PPHelper {
                 } else {
                     //当前path片段item为null
                     //Log.v("ppLog", "当前path片段item为null");
-                    Log.v("ppLog", "path中间片段取值为null, 停止继续解析");
+                    Log.v("ppLog", path + ":path中间片段取值为null, 停止继续解析");
                     return null;
                 }
             }

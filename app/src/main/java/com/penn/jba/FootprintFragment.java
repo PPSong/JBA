@@ -50,6 +50,7 @@ public class FootprintFragment extends Fragment {
 
         adapterViewPager = new MyPagerAdapter(getChildFragmentManager());
         binding.mainViewPager.setAdapter(adapterViewPager);
+        binding.mainViewPager.setSwipeable(false);
 
         return view;
     }

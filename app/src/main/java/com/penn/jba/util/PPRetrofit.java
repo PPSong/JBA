@@ -51,7 +51,7 @@ public class PPRetrofit
         try {
             request = new JSONObject()
                     .put("method", apiName)
-                    .put("data", jBody)
+                    .put("data", jBody == null ? "" : jBody)
                     .put("auth", authBody)
                     .toString();
         } catch (JSONException e) {
