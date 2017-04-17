@@ -3,6 +3,7 @@ package com.penn.jba;
 import android.content.Context;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
+import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.support.annotation.IdRes;
@@ -16,6 +17,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.mikepenz.materialdrawer.AccountHeader;
@@ -27,12 +29,15 @@ import com.mikepenz.materialdrawer.model.PrimaryDrawerItem;
 import com.mikepenz.materialdrawer.model.ProfileDrawerItem;
 import com.mikepenz.materialdrawer.model.interfaces.IDrawerItem;
 import com.mikepenz.materialdrawer.model.interfaces.IProfile;
+import com.mikepenz.materialdrawer.util.AbstractDrawerImageLoader;
+import com.mikepenz.materialdrawer.util.DrawerImageLoader;
 import com.penn.jba.databinding.ActivityLoginBinding;
 import com.penn.jba.databinding.ActivityTabsBinding;
 import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.realm.model.CurrentUserSetting;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPRetrofit;
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -144,12 +149,25 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
 
         PrimaryDrawerItem item0 = new PrimaryDrawerItem().withIdentifier(0).withName(R.string.logout).withIcon(R.drawable.ic_eject_black_24dp);
 
+        DrawerImageLoader.init(new AbstractDrawerImageLoader() {
+            @Override
+            public void set(ImageView imageView, Uri uri, Drawable placeholder) {
+                Picasso.with(imageView.getContext()).load(uri).placeholder(placeholder).into(imageView);
+            }
+
+            @Override
+            public void cancel(ImageView imageView) {
+                Picasso.with(imageView.getContext()).cancelRequest(imageView);
+            }
+        });
+
         // Create the AccountHeader
         AccountHeader headerResult = new AccountHeaderBuilder()
                 .withActivity(this)
-                .withHeaderBackground(R.drawable.header)
+                //.withHeaderBackground(R.drawable.header)
                 .addProfiles(
-                        new ProfileDrawerItem().withName("Mike Penz").withIcon(R.drawable.profile)
+                        //new ProfileDrawerItem().withName("Mike Penz").withIcon(R.drawable.profile)
+                        new ProfileDrawerItem().withName("Mike").withIcon("http://7xu8w0.com1.z0.glb.clouddn.com/147391088977946Y14C-1024x680.jpg?imageView2/1/w/80/h/80/interlace/1/")
                 )
                 .withOnAccountHeaderListener(new AccountHeader.OnAccountHeaderListener() {
                     @Override
@@ -158,7 +176,6 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                     }
                 })
                 .build();
-
 
         //create the drawer and remember the `Drawer` result object
         drawerResult = new DrawerBuilder()

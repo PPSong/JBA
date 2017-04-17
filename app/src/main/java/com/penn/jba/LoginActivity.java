@@ -22,6 +22,7 @@ import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPJSONObject;
 import com.penn.jba.util.PPRetrofit;
 import com.penn.jba.util.PPWarn;
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -88,7 +89,6 @@ public class LoginActivity extends AppCompatActivity {
         if (signInResult != null) {
             signInOk(signInResult);
         } else {
-
         }
     }
 
