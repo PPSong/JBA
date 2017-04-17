@@ -84,7 +84,6 @@
                     style="@style/Widget.AppCompat.Button.Borderless.Colored"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> presenter.goForgetPassword()}"
                     android:text="@string/forget_password" />
 
                 <Button
@@ -92,7 +91,6 @@
                     style="@style/Widget.AppCompat.Button.Borderless.Colored"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:onClick="@{() -> presenter.goSignUp()}"
                     android:text="@string/create_new_account" />
             </LinearLayout>
 

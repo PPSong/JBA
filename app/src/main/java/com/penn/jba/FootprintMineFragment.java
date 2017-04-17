@@ -29,6 +29,7 @@ import com.penn.jba.util.PPWarn;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.realm.OrderedCollectionChangeSet;
 import io.realm.OrderedRealmCollectionChangeListener;
@@ -84,6 +85,7 @@ public class FootprintMineFragment extends Fragment {
         return view;
     }
 
+    //-----helper-----
     private final OrderedRealmCollectionChangeListener<RealmResults<FootprintMine>> changeListener = new OrderedRealmCollectionChangeListener<RealmResults<FootprintMine>>() {
         @Override
         public void onChange(RealmResults<FootprintMine> collection, OrderedCollectionChangeSet changeSet) {
@@ -121,6 +123,7 @@ public class FootprintMineFragment extends Fragment {
 
             JsonArray ja = PPHelper.ppFromString(s, "data").getAsJsonArray();
 
+            int realNum = 0;
             for (int i = 0; i < ja.size(); i++) {
 
                 //防止loadmore是查询到已有的记录
@@ -130,6 +133,7 @@ public class FootprintMineFragment extends Fragment {
 
                 if (ftm == null) {
                     ftm = realm.createObject(FootprintMine.class, PPHelper.ppFromString(s, "data." + i + ".hash").getAsString());
+                    realNum++;
                 }
 
                 ftm.setCreateTime(PPHelper.ppFromString(s, "data." + i + ".createTime").getAsLong());
@@ -139,7 +143,7 @@ public class FootprintMineFragment extends Fragment {
             }
             realm.commitTransaction();
 
-            return ja.size();
+            return realNum;
         }
     }
 
@@ -159,34 +163,40 @@ public class FootprintMineFragment extends Fragment {
             final Observable<String> apiResult = PPRetrofit.getInstance().api("footprint.myMoment", jBody.getJSONObject());
             apiResult
                     .subscribeOn(Schedulers.io())
+                    .map(new Function<String, String>() {
+                        @Override
+                        public String apply(String s) throws Exception {
+                            PPWarn ppWarn = PPHelper.ppWarning(s);
+
+                            if (ppWarn != null) {
+                                return ppWarn.msg;
+                            } else {
+                                processFootprintMine(s, true);
+                                return "OK";
+                            }
+                        }
+                    })
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             new Consumer<String>() {
                                 public void accept(String s) {
-                                    Log.v("ppLog", "get result:" + s);
+                                    if (s != "OK") {
+                                        PPHelper.showPPToast(activityContext, s, Toast.LENGTH_SHORT);
 
-                                    PPWarn ppWarn = PPHelper.ppWarning(s);
-                                    if (ppWarn != null) {
-                                        Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
                                         return;
                                     }
-
-                                    processFootprintMine(s, true);
                                     swipeRefreshLayout.setRefreshing(false);
                                     end();
                                     reset();
-                                    Log.v("ppLog2", "get result end:");
                                 }
                             },
                             new Consumer<Throwable>() {
                                 public void accept(Throwable t1) {
-                                    //jobProcessing.onNext(false);
+                                    PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
 
-                                    Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                    Log.v("ppLog", "error:" + t1.toString());
                                     swipeRefreshLayout.setRefreshing(false);
                                     end();
-                                    Log.v("ppLog2", "get result error:");
+
                                     t1.printStackTrace();
                                 }
                             }
@@ -195,6 +205,7 @@ public class FootprintMineFragment extends Fragment {
 
         @Override
         public void doLoadMore() {
+            Log.v("pplog9", "doLoadMore");
             PPJSONObject jBody = new PPJSONObject();
             jBody
                     .put("beforeThan", "" + footprintMines.last().getHash())
@@ -203,18 +214,30 @@ public class FootprintMineFragment extends Fragment {
             final Observable<String> apiResult = PPRetrofit.getInstance().api("footprint.myMoment", jBody.getJSONObject());
             apiResult
                     .subscribeOn(Schedulers.io())
+                    .map(new Function<String, String>() {
+                        @Override
+                        public String apply(String s) throws Exception {
+                            PPWarn ppWarn = PPHelper.ppWarning(s);
+
+                            if (ppWarn != null) {
+                                return ppWarn.msg;
+                            } else {
+                                if (processFootprintMine(s, false) == 0) {
+                                    noMore();
+                                }
+
+                                return "OK";
+                            }
+                        }
+                    })
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             new Consumer<String>() {
                                 public void accept(String s) {
-                                    PPWarn ppWarn = PPHelper.ppWarning(s);
-                                    if (ppWarn != null) {
-                                        Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
-                                        return;
-                                    }
+                                    if (s != "OK") {
+                                        PPHelper.showPPToast(activityContext, s, Toast.LENGTH_SHORT);
 
-                                    if (processFootprintMine(s, false) == 0) {
-                                        noMore();
+                                        return;
                                     }
 
                                     PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
@@ -225,8 +248,7 @@ public class FootprintMineFragment extends Fragment {
                             },
                             new Consumer<Throwable>() {
                                 public void accept(Throwable t1) {
-                                    Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                    Log.v("ppLog", "error:" + t1.toString());
+                                    PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                     t1.printStackTrace();
 
                                     PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));

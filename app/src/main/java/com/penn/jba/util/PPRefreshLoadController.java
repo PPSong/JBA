@@ -30,7 +30,6 @@ public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRe
             final LinearLayoutManager linearLayoutManager = (LinearLayoutManager) recyclerView
                     .getLayoutManager();
 
-
             recyclerView
                     .addOnScrollListener(new RecyclerView.OnScrollListener() {
                         @Override
@@ -45,7 +44,6 @@ public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRe
                             if (!noMore && !loading && totalItemCount <= (lastVisibleItem + visibleThreshold)) {
                                 // End has been reached
                                 // Do something
-                                Log.v("pplog", "totalItemCount:" + totalItemCount + ",lastVisibleItem:" + lastVisibleItem + ",visibleThreshold:" + visibleThreshold);
                                 loadMore(recyclerView);
                             }
 

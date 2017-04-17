@@ -37,7 +37,7 @@ import io.reactivex.subjects.BehaviorSubject;
 
 public class ForgetPasswordActivity extends AppCompatActivity {
     private Context activityContext;
-    
+
     private ActivityForgetPasswordBinding binding;
 
     private ArrayList<Disposable> disposableList = new ArrayList<Disposable>();
@@ -63,7 +63,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
 
         activityContext = this;
-        
+
         binding = DataBindingUtil.setContentView(this, R.layout.activity_forget_password);
         binding.setPresenter(this);
 
@@ -92,6 +92,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         }
     }
 
+    //-----helper-----
     private void setup() {
         //先发送个初始事件,便于判断按钮是否可用
         jobProcessing.onNext(false);
@@ -330,7 +331,7 @@ public class ForgetPasswordActivity extends AppCompatActivity {
         );
     }
 
-    public void requestVerifyCode() {
+    private void requestVerifyCode() {
         jobProcessing.onNext(true);
         PPJSONObject jBody = new PPJSONObject();
         jBody
@@ -349,7 +350,8 @@ public class ForgetPasswordActivity extends AppCompatActivity {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    PPHelper.showPPToast(activityContext, ppWarn.msg, Toast.LENGTH_SHORT);
+
                                     return;
                                 }
 
@@ -360,15 +362,14 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                             public void accept(Throwable t1) {
                                 jobProcessing.onNext(false);
 
-                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                Log.v("ppLog", "error:" + t1.toString());
+                                PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                 t1.printStackTrace();
                             }
                         }
                 );
     }
 
-    public void resetPassword() {
+    private void resetPassword() {
         jobProcessing.onNext(true);
         PPJSONObject jBody = new PPJSONObject();
         jBody
@@ -383,12 +384,12 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                 .subscribe(
                         new Consumer<String>() {
                             public void accept(String s) {
-                                Log.v("ppLog", "get result:" + s);
                                 jobProcessing.onNext(false);
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    PPHelper.showPPToast(activityContext, ppWarn.msg, Toast.LENGTH_SHORT);
+
                                     return;
                                 }
                             }
@@ -397,13 +398,10 @@ public class ForgetPasswordActivity extends AppCompatActivity {
                             public void accept(Throwable t1) {
                                 jobProcessing.onNext(false);
 
-                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                Log.v("ppLog", "error:" + t1.toString());
+                                PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                 t1.printStackTrace();
                             }
                         }
                 );
     }
-
-    //-----helper-----
 }

@@ -13,7 +13,6 @@ import android.view.inputmethod.EditorInfo;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.facebook.stetho.Stetho;
 import com.jakewharton.rxbinding2.view.RxView;
 import com.jakewharton.rxbinding2.widget.RxTextView;
 import com.penn.jba.databinding.ActivityLoginBinding;
@@ -23,14 +22,12 @@ import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPJSONObject;
 import com.penn.jba.util.PPRetrofit;
 import com.penn.jba.util.PPWarn;
-import com.uphyca.stetho_realm.RealmInspectorModulesProvider;
 
 import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
 import java.util.concurrent.TimeUnit;
-import java.util.regex.Pattern;
 
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -41,9 +38,6 @@ import io.reactivex.functions.Function3;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.realm.Realm;
-import io.realm.RealmConfiguration;
-
-import static com.penn.jba.util.PPRetrofit.authBody;
 
 public class LoginActivity extends AppCompatActivity {
     private Context activityContext;
@@ -98,52 +92,7 @@ public class LoginActivity extends AppCompatActivity {
         }
     }
 
-    private void signInOk(String signInResult) {
-        String phone = PPHelper.ppFromString(signInResult, "data.extra.0").getAsString();
-        PPHelper.initRealm(this, phone, false);
-        try (Realm realm = Realm.getDefaultInstance()) {
-            realm.beginTransaction();
-
-            CurrentUser currentUser = realm.where(CurrentUser.class)
-                    .findFirst();
-
-            CurrentUserSetting currentUserSetting;
-
-            if (currentUser == null) {
-                //新注册用户或者首次在本手机使用
-                currentUser = realm.createObject(CurrentUser.class);
-                //默认在足迹页面不是显示我的moment
-                currentUserSetting = realm.createObject(CurrentUserSetting.class);
-                currentUserSetting.setFootprintMine(false);
-            }
-
-            currentUser.setUserId(PPHelper.ppFromString(signInResult, "data.userid").getAsString());
-            currentUser.setToken(PPHelper.ppFromString(signInResult, "data.token").getAsString());
-            currentUser.setTokenTimestamp(PPHelper.ppFromString(signInResult, "data.tokentimestamp").getAsLong());
-            currentUser.setPhone(phone);
-            currentUser.setNickname(PPHelper.ppFromString(signInResult, "data.extra.1").getAsString());
-            currentUser.setGender(PPHelper.ppFromString(signInResult, "data.extra.2").getAsInt());
-            currentUser.setBirthday(PPHelper.ppFromString(signInResult, "data.extra.5").getAsLong());
-
-            realm.commitTransaction();
-
-            //设置PPRetrofit authBody
-            try {
-                String authBody = new JSONObject()
-                        .put("userid", currentUser.getUserId())
-                        .put("token", currentUser.getToken())
-                        .put("tokentimestamp", currentUser.getTokenTimestamp())
-                        .toString();
-                PPRetrofit.authBody = authBody;
-            } catch (JSONException e) {
-                Log.v("ppLog", "api data error:" + e);
-            }
-        }
-
-        Intent intent1 = new Intent(this, TabsActivity.class);
-        startActivity(intent1);
-    }
-
+    //-----helper-----
     private void setup() {
         //先发送个初始事件,便于判断按钮是否可用
         jobProcessing.onNext(false);
@@ -220,6 +169,38 @@ public class LoginActivity extends AppCompatActivity {
                 )
         );
 
+        //忘记密码按钮监控
+        Observable<Object> forgetPasswordButtonObservable = RxView.clicks(binding.forgetPasswordButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(forgetPasswordButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                goForgetPassword();
+                            }
+                        }
+                )
+        );
+
+        //注册按钮监控
+        Observable<Object> createNewAccountButtonObservable = RxView.clicks(binding.createNewAccountButton)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(createNewAccountButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                goSignUp();
+                            }
+                        }
+                )
+        );
+
         //忘记密码,注册新账号是否可用,进度条是否可见
         disposableList.add(jobProcessing
                 .subscribeOn(Schedulers.io())
@@ -256,7 +237,8 @@ public class LoginActivity extends AppCompatActivity {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    PPHelper.showPPToast(activityContext, ppWarn.msg, Toast.LENGTH_SHORT);
+
                                     return;
                                 }
 
@@ -267,25 +249,68 @@ public class LoginActivity extends AppCompatActivity {
                             public void accept(Throwable t1) {
                                 jobProcessing.onNext(false);
 
-                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                Log.v("ppLog", "error:" + t1.toString());
+                                PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                 t1.printStackTrace();
                             }
                         }
                 );
     }
 
-    //-----UI event handler-----
-    public void goForgetPassword() {
+
+    private void signInOk(String signInResult) {
+        String phone = PPHelper.ppFromString(signInResult, "data.extra.0").getAsString();
+        PPHelper.initRealm(this, phone, false);
+        try (Realm realm = Realm.getDefaultInstance()) {
+            realm.beginTransaction();
+
+            CurrentUser currentUser = realm.where(CurrentUser.class)
+                    .findFirst();
+
+            CurrentUserSetting currentUserSetting;
+
+            if (currentUser == null) {
+                //新注册用户或者首次在本手机使用
+                currentUser = realm.createObject(CurrentUser.class);
+                //默认在足迹页面不是显示我的moment
+                currentUserSetting = realm.createObject(CurrentUserSetting.class);
+                currentUserSetting.setFootprintMine(false);
+            }
+
+            currentUser.setUserId(PPHelper.ppFromString(signInResult, "data.userid").getAsString());
+            currentUser.setToken(PPHelper.ppFromString(signInResult, "data.token").getAsString());
+            currentUser.setTokenTimestamp(PPHelper.ppFromString(signInResult, "data.tokentimestamp").getAsLong());
+            currentUser.setPhone(phone);
+            currentUser.setNickname(PPHelper.ppFromString(signInResult, "data.extra.1").getAsString());
+            currentUser.setGender(PPHelper.ppFromString(signInResult, "data.extra.2").getAsInt());
+            currentUser.setBirthday(PPHelper.ppFromString(signInResult, "data.extra.5").getAsLong());
+
+            realm.commitTransaction();
+
+            //设置PPRetrofit authBody
+            try {
+                String authBody = new JSONObject()
+                        .put("userid", currentUser.getUserId())
+                        .put("token", currentUser.getToken())
+                        .put("tokentimestamp", currentUser.getTokenTimestamp())
+                        .toString();
+                PPRetrofit.authBody = authBody;
+            } catch (JSONException e) {
+                Log.v("ppLog", "api data error:" + e);
+            }
+        }
+
+        Intent intent1 = new Intent(this, TabsActivity.class);
+        startActivity(intent1);
+    }
+
+    private void goForgetPassword() {
         Intent intent = new Intent(this, ForgetPasswordActivity.class);
         startActivity(intent);
     }
 
-    public void goSignUp() {
+    private void goSignUp() {
         Intent intent = new Intent(this, SignUp1Activity.class);
         startActivity(intent);
     }
-
-    //-----helper-----
 }
 

@@ -40,11 +40,21 @@ public class PPHelper {
     //pptodo remove testing block
     public static BehaviorSubject<Boolean> testingInit = BehaviorSubject.<Boolean>create();
 
+    public static Toast ppToast;
+
+    public static void showPPToast(Context context, String msg, int length) {
+        if (ppToast != null) {
+            ppToast.cancel();
+        }
+
+        ppToast = Toast.makeText(context, msg, length);
+        ppToast.show();
+    }
+
     public static void ppTestInit(Context context, String phone, String pwd, boolean clearData) {
         if (pwd != null) {
             ppTestSignIn(context, phone, pwd, clearData);
-        }
-        else {
+        } else {
             initRealm(context, phone, false);
             try (Realm realm = Realm.getDefaultInstance()) {
 
@@ -84,7 +94,8 @@ public class PPHelper {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    showPPToast(activityContext, ppWarn.msg, Toast.LENGTH_SHORT);
+
                                     return;
                                 }
 
@@ -134,7 +145,7 @@ public class PPHelper {
                         new Consumer<Throwable>() {
                             public void accept(Throwable t1) {
 
-                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
+                                showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                 Log.v("ppLog", "error:" + t1.toString());
                                 t1.printStackTrace();
                             }

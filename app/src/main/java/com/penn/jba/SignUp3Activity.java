@@ -3,7 +3,6 @@ package com.penn.jba;
 import android.app.DatePickerDialog;
 import android.app.Dialog;
 
-import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -12,56 +11,41 @@ import java.util.concurrent.TimeUnit;
 import android.content.Context;
 import android.content.Intent;
 import android.databinding.DataBindingUtil;
-import android.os.AsyncTask;
 import android.support.v4.app.DialogFragment;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.DatePicker;
-import android.widget.EditText;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.jakewharton.rxbinding2.view.RxView;
-import com.jakewharton.rxbinding2.widget.RxCheckedTextView;
 import com.jakewharton.rxbinding2.widget.RxCompoundButton;
 import com.jakewharton.rxbinding2.widget.RxRadioGroup;
 import com.jakewharton.rxbinding2.widget.RxTextView;
-import com.penn.jba.databinding.ActivitySignUp2Binding;
 import com.penn.jba.databinding.ActivitySignUp3Binding;
-import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPJSONObject;
 import com.penn.jba.util.PPRetrofit;
 import com.penn.jba.util.PPWarn;
 
-import org.reactivestreams.Subscriber;
-import org.reactivestreams.Subscription;
-
 import io.reactivex.Observable;
-import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.disposables.Disposable;
-import io.reactivex.functions.BiFunction;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
-import io.reactivex.functions.Function3;
-import io.reactivex.functions.Function4;
 import io.reactivex.functions.Function6;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.realm.Realm;
 
-import static com.penn.jba.util.PPHelper.isValidDate;
-
 public class SignUp3Activity extends AppCompatActivity {
+    private static BehaviorSubject<String> birthdayString = BehaviorSubject.create();
+
     private Context activityContext;
 
-    private static ActivitySignUp3Binding binding;
+    private ActivitySignUp3Binding binding;
 
     private Realm realm;
 
@@ -112,7 +96,8 @@ public class SignUp3Activity extends AppCompatActivity {
         }
     }
 
-    public void setup() {
+    //-----help-----
+    private void setup() {
         //先发送个初始事件,便于判断按钮是否可用
         jobProcessing.onNext(false);
 
@@ -318,6 +303,20 @@ public class SignUp3Activity extends AppCompatActivity {
                         }
                 )
         );
+
+        //选择生日对话框
+        disposableList.add(birthdayString
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(
+                        new Consumer<String>() {
+                            @Override
+                            public void accept(String s) throws Exception {
+                                binding.birthdayInput.setText(s);
+                            }
+                        }
+                )
+        );
     }
 
     private void requestRandomNickname() {
@@ -336,7 +335,8 @@ public class SignUp3Activity extends AppCompatActivity {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
+                                    PPHelper.showPPToast(activityContext, ppWarn.msg, Toast.LENGTH_SHORT);
+
                                     return;
                                 }
 
@@ -348,15 +348,14 @@ public class SignUp3Activity extends AppCompatActivity {
                             public void accept(Throwable t1) {
                                 jobProcessing.onNext(false);
 
-                                Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                Log.v("ppLog", "error:" + t1.toString());
+                                PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                 t1.printStackTrace();
                             }
                         }
                 );
     }
 
-    public void signUp() {
+    private void signUp() {
         jobProcessing.onNext(true);
 
         final String tmpPhone = phone;
@@ -430,7 +429,6 @@ public class SignUp3Activity extends AppCompatActivity {
 
     }
 
-    //-----helper-----
     private void loginOK(String result) {
         Intent intent = new Intent(activityContext, LoginActivity.class);
         intent.putExtra("signInResult", result);
@@ -461,7 +459,7 @@ public class SignUp3Activity extends AppCompatActivity {
             cal.set(Calendar.DAY_OF_MONTH, day);
             cal.set(Calendar.MONTH, month);
             String dateString = new SimpleDateFormat("yyyy-MM-dd").format(cal.getTime());
-            binding.birthdayInput.setText(dateString);
+            birthdayString.onNext(dateString);
         }
     }
 }

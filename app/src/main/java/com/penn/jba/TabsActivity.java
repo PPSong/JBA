@@ -1,6 +1,7 @@
 package com.penn.jba;
 
 import android.content.Context;
+import android.content.Intent;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
 import android.os.Bundle;
@@ -24,7 +25,6 @@ import com.mikepenz.materialdrawer.DrawerBuilder;
 import com.mikepenz.materialdrawer.model.DividerDrawerItem;
 import com.mikepenz.materialdrawer.model.PrimaryDrawerItem;
 import com.mikepenz.materialdrawer.model.ProfileDrawerItem;
-import com.mikepenz.materialdrawer.model.SecondaryDrawerItem;
 import com.mikepenz.materialdrawer.model.interfaces.IDrawerItem;
 import com.mikepenz.materialdrawer.model.interfaces.IProfile;
 import com.penn.jba.databinding.ActivityLoginBinding;
@@ -63,7 +63,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
         super.onCreate(savedInstanceState);
 
         //pptodo remove this testing entry
-        if (true) {
+        if (false) {
             disposableList.add(PPHelper.testingInit
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
@@ -76,7 +76,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                             }
                     )
             );
-            PPHelper.ppTestInit(this, "18602103868", "123456", false);
+            PPHelper.ppTestInit(this, "18602103868", "123456", true);
             return;
         }
         //pptodo end remove this testing entry
@@ -84,6 +84,44 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
         setup();
     }
 
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        for (Disposable d : disposableList) {
+            if (!d.isDisposed()) {
+                d.dispose();
+            }
+        }
+    }
+
+    @Override
+    public boolean onItemClick(View view, int position, IDrawerItem drawerItem) {
+        Log.v("ppLog", "test:" + drawerItem.getIdentifier());
+        switch ((int) drawerItem.getIdentifier()) {
+            case 0:
+                //logout
+                Intent intent = new Intent(this, LoginActivity.class);
+                startActivity(intent);
+                break;
+            case 1:
+                //足迹
+                binding.mainViewPager.setCurrentItem(0, false);
+                binding.toolbar.setTitle(adapterViewPager.getPageTitle(0));
+                drawerResult.closeDrawer();
+                break;
+            case 2:
+                //迹伴
+                binding.mainViewPager.setCurrentItem(1, false);
+                binding.toolbar.setTitle(adapterViewPager.getPageTitle(1));
+                drawerResult.closeDrawer();
+                break;
+            default:
+        }
+        // do something with the clicked item :D
+        return true;
+    }
+
+    //-----helper-----
     private void setup() {
         activityContext = this;
 
@@ -138,42 +176,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
         drawerResult.addStickyFooterItem(item0);
     }
 
-    @Override
-    protected void onDestroy() {
-        super.onDestroy();
-        for (Disposable d : disposableList) {
-            if (!d.isDisposed()) {
-                d.dispose();
-            }
-        }
-    }
-
-    @Override
-    public boolean onItemClick(View view, int position, IDrawerItem drawerItem) {
-        Log.v("ppLog", "test:" + drawerItem.getIdentifier());
-        switch ((int) drawerItem.getIdentifier()) {
-            case 0:
-                //logout
-                break;
-            case 1:
-                //足迹
-                binding.mainViewPager.setCurrentItem(0, false);
-                binding.toolbar.setTitle(adapterViewPager.getPageTitle(0));
-                drawerResult.closeDrawer();
-                break;
-            case 2:
-                //迹伴
-                binding.mainViewPager.setCurrentItem(1, false);
-                binding.toolbar.setTitle(adapterViewPager.getPageTitle(1));
-                drawerResult.closeDrawer();
-                break;
-            default:
-        }
-        // do something with the clicked item :D
-        return true;
-    }
-
-    public class MyPagerAdapter extends FragmentPagerAdapter {
+    private class MyPagerAdapter extends FragmentPagerAdapter {
         private final int NUM_ITEMS = 2;
 
         public MyPagerAdapter(FragmentManager fragmentManager) {

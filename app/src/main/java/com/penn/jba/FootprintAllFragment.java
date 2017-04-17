@@ -3,6 +3,7 @@ package com.penn.jba;
 import android.content.Context;
 import android.databinding.DataBindingUtil;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v4.app.Fragment;
@@ -18,7 +19,6 @@ import android.widget.Toast;
 import com.google.gson.JsonArray;
 import com.penn.jba.databinding.FragmentFootprintAllBinding;
 import com.penn.jba.realm.model.FootprintAll;
-import com.penn.jba.realm.model.FootprintAll;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPJSONObject;
 import com.penn.jba.util.PPLoadAdapter;
@@ -29,6 +29,7 @@ import com.penn.jba.util.PPWarn;
 import io.reactivex.Observable;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.realm.OrderedCollectionChangeSet;
 import io.realm.OrderedRealmCollectionChangeListener;
@@ -79,11 +80,15 @@ public class FootprintAllFragment extends Fragment {
         binding.mainRv.setLayoutManager(new LinearLayoutManager(getActivity()));
         footprintAllAdapter = new FootprintAllAdapter(footprintAlls);
         binding.mainRv.setAdapter(footprintAllAdapter);
+
+        binding.mainRv.setHasFixedSize(true);
+
         ppRefreshLoadController = new InnerPPRefreshLoadController(binding.mainSwipeRefreshLayout, binding.mainRv);
 
         return view;
     }
 
+    //-----helper-----
     private final OrderedRealmCollectionChangeListener<RealmResults<FootprintAll>> changeListener = new OrderedRealmCollectionChangeListener<RealmResults<FootprintAll>>() {
         @Override
         public void onChange(RealmResults<FootprintAll> collection, OrderedCollectionChangeSet changeSet) {
@@ -121,6 +126,7 @@ public class FootprintAllFragment extends Fragment {
 
             JsonArray ja = PPHelper.ppFromString(s, "data").getAsJsonArray();
 
+            int realNum = 0;
             for (int i = 0; i < ja.size(); i++) {
 
                 //防止loadmore是查询到已有的记录
@@ -130,6 +136,7 @@ public class FootprintAllFragment extends Fragment {
 
                 if (ftm == null) {
                     ftm = realm.createObject(FootprintAll.class, PPHelper.ppFromString(s, "data." + i + ".hash").getAsString());
+                    realNum++;
                 }
 
                 ftm.setCreateTime(PPHelper.ppFromString(s, "data." + i + ".createTime").getAsLong());
@@ -139,7 +146,8 @@ public class FootprintAllFragment extends Fragment {
             }
 
             realm.commitTransaction();
-            return ja.size();
+
+            return realNum;
         }
     }
 
@@ -159,34 +167,40 @@ public class FootprintAllFragment extends Fragment {
             final Observable<String> apiResult = PPRetrofit.getInstance().api("footprint.mine", jBody.getJSONObject());
             apiResult
                     .subscribeOn(Schedulers.io())
+                    .map(new Function<String, String>() {
+                        @Override
+                        public String apply(String s) throws Exception {
+                            PPWarn ppWarn = PPHelper.ppWarning(s);
+
+                            if (ppWarn != null) {
+                                return ppWarn.msg;
+                            } else {
+                                processFootprintAll(s, true);
+                                return "OK";
+                            }
+                        }
+                    })
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             new Consumer<String>() {
                                 public void accept(String s) {
-                                    Log.v("ppLog", "get result:" + s);
+                                    if (s != "OK") {
+                                        PPHelper.showPPToast(activityContext, s, Toast.LENGTH_SHORT);
 
-                                    PPWarn ppWarn = PPHelper.ppWarning(s);
-                                    if (ppWarn != null) {
-                                        Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
                                         return;
                                     }
-
-                                    processFootprintAll(s, true);
                                     swipeRefreshLayout.setRefreshing(false);
                                     end();
                                     reset();
-                                    Log.v("ppLog2", "get result end:");
                                 }
                             },
                             new Consumer<Throwable>() {
                                 public void accept(Throwable t1) {
-                                    //jobProcessing.onNext(false);
+                                    PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
 
-                                    Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                    Log.v("ppLog", "error:" + t1.toString());
                                     swipeRefreshLayout.setRefreshing(false);
                                     end();
-                                    Log.v("ppLog2", "get result error:");
+
                                     t1.printStackTrace();
                                 }
                             }
@@ -203,18 +217,30 @@ public class FootprintAllFragment extends Fragment {
             final Observable<String> apiResult = PPRetrofit.getInstance().api("footprint.mine", jBody.getJSONObject());
             apiResult
                     .subscribeOn(Schedulers.io())
+                    .map(new Function<String, String>() {
+                        @Override
+                        public String apply(String s) throws Exception {
+                            PPWarn ppWarn = PPHelper.ppWarning(s);
+
+                            if (ppWarn != null) {
+                                return ppWarn.msg;
+                            } else {
+                                if (processFootprintAll(s, false) == 0) {
+                                    noMore();
+                                }
+
+                                return "OK";
+                            }
+                        }
+                    })
                     .observeOn(AndroidSchedulers.mainThread())
                     .subscribe(
                             new Consumer<String>() {
                                 public void accept(String s) {
-                                    PPWarn ppWarn = PPHelper.ppWarning(s);
-                                    if (ppWarn != null) {
-                                        Toast.makeText(activityContext, ppWarn.msg, Toast.LENGTH_SHORT).show();
-                                        return;
-                                    }
+                                    if (s != "OK") {
+                                        PPHelper.showPPToast(activityContext, s, Toast.LENGTH_SHORT);
 
-                                    if (processFootprintAll(s, false) == 0) {
-                                        noMore();
+                                        return;
                                     }
 
                                     PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
@@ -225,8 +251,7 @@ public class FootprintAllFragment extends Fragment {
                             },
                             new Consumer<Throwable>() {
                                 public void accept(Throwable t1) {
-                                    Toast.makeText(activityContext, t1.getMessage(), Toast.LENGTH_SHORT).show();
-                                    Log.v("ppLog", "error:" + t1.toString());
+                                    PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                     t1.printStackTrace();
 
                                     PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));

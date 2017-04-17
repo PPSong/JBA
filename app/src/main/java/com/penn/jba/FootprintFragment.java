@@ -42,6 +42,19 @@ public class FootprintFragment extends Fragment {
     }
 
     @Override
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        binding = DataBindingUtil.inflate(
+                inflater, R.layout.fragment_footprint, container, false);
+        View view = binding.getRoot();
+        binding.setPresenter(this);
+
+        adapterViewPager = new MyPagerAdapter(getChildFragmentManager());
+        binding.mainViewPager.setAdapter(adapterViewPager);
+
+        return view;
+    }
+
+    @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.footprint_option, menu);
         this.menu = menu;
@@ -64,6 +77,7 @@ public class FootprintFragment extends Fragment {
         return false;
     }
 
+    //-----helper-----
     private void toggleMyMoment(boolean change) {
         //根据当前用户的setting来设置图标
         try (Realm realm = Realm.getDefaultInstance()) {
@@ -89,20 +103,7 @@ public class FootprintFragment extends Fragment {
         }
     }
 
-    @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
-        binding = DataBindingUtil.inflate(
-                inflater, R.layout.fragment_footprint, container, false);
-        View view = binding.getRoot();
-        binding.setPresenter(this);
-
-        adapterViewPager = new MyPagerAdapter(getChildFragmentManager());
-        binding.mainViewPager.setAdapter(adapterViewPager);
-
-        return view;
-    }
-
-    public class MyPagerAdapter extends FragmentPagerAdapter {
+    private class MyPagerAdapter extends FragmentPagerAdapter {
         private final int NUM_ITEMS = 2;
 
         public MyPagerAdapter(FragmentManager fragmentManager) {
