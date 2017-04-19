@@ -95,9 +95,10 @@ public class LoginActivity extends AppCompatActivity {
         String signInResult = intent.getStringExtra("signInResult");
         if (signInResult != null) {
             try {
-                signInOk(signInResult);
+                startUpOk(signInResult);
             } catch (Exception e) {
-                PPHelper.showPPToast(this, "signInOk error:" + e, Toast.LENGTH_SHORT);
+                Log.v("pplog", "login onNewIntent error:" + e);
+                PPHelper.showPPToast(this, "signInOk error:" + e, Toast.LENGTH_LONG);
             }
         } else {
         }
@@ -283,75 +284,11 @@ public class LoginActivity extends AppCompatActivity {
 
 
     private void signInOk(String s) throws Exception {
-        String phone = PPHelper.ppFromString(s, "data.extra.0").getAsString();
-        PPHelper.initRealm(activityContext, phone, false);
-        try (Realm realm = Realm.getDefaultInstance()) {
-            realm.beginTransaction();
-
-            CurrentUser currentUser = realm.where(CurrentUser.class)
-                    .findFirst();
-
-            CurrentUserSetting currentUserSetting;
-
-            if (currentUser == null) {
-                //新注册用户或者首次在本手机使用
-                currentUser = realm.createObject(CurrentUser.class);
-                //默认在足迹页面不是显示我的moment
-                currentUserSetting = realm.createObject(CurrentUserSetting.class);
-                currentUserSetting.setFootprintMine(false);
-            }
-
-            currentUser.setUserId(PPHelper.ppFromString(s, "data.userid").getAsString());
-            currentUser.setToken(PPHelper.ppFromString(s, "data.token").getAsString());
-            currentUser.setTokenTimestamp(PPHelper.ppFromString(s, "data.tokentimestamp").getAsLong());
-
-            realm.commitTransaction();
-
-            //设置PPRetrofit authBody
-            String authBody = new JSONObject()
-                    .put("userid", currentUser.getUserId())
-                    .put("token", currentUser.getToken())
-                    .put("tokentimestamp", currentUser.getTokenTimestamp())
-                    .toString();
-            PPRetrofit.authBody = authBody;
-        }
+       PPHelper.signInOk(this, s, false);
     }
 
     private void startUpOk(String s) {
-        try (Realm realm = Realm.getDefaultInstance()) {
-            realm.beginTransaction();
-
-            CurrentUser currentUser = realm.where(CurrentUser.class)
-                    .findFirst();
-
-            currentUser.setPhone(PPHelper.ppFromString(s, "data.userInfo.phone").getAsString());
-            currentUser.setNickname(PPHelper.ppFromString(s, "data.userInfo.nickname").getAsString());
-            currentUser.setGender(PPHelper.ppFromString(s, "data.userInfo.gender").getAsInt());
-            currentUser.setBirthday(PPHelper.ppFromString(s, "data.userInfo.birthday").getAsLong());
-            currentUser.setHead(PPHelper.ppFromString(s, "data.userInfo.head").getAsString());
-            currentUser.setBaiduApiUrl(PPHelper.ppFromString(s, "data.settings.geo.api").getAsString());
-            currentUser.setBaiduAkBrowser(PPHelper.ppFromString(s, "data.settings.geo.ak_browser").getAsString());
-            currentUser.setSocketHost(PPHelper.ppFromString(s, "data.settings.socket.host").getAsString());
-            currentUser.setSocketPort(PPHelper.ppFromString(s, "data.settings.socket.port").getAsInt());
-            currentUser.setUnreadMessageMoment(PPHelper.ppFromString(s, "data.stats.message.moment").getAsInt());
-            currentUser.setUnreadMessageIndex(PPHelper.ppFromString(s, "data.stats.message.index").getAsInt());
-            currentUser.setUnreadMessageFriend(PPHelper.ppFromString(s, "data.stats.message.friend").getAsInt());
-            currentUser.setUnreadMessageSystem(PPHelper.ppFromString(s, "data.stats.message.system").getAsInt());
-            currentUser.setFollows(PPHelper.ppFromString(s, "data.stats.follows").getAsInt());
-            currentUser.setNewFriend(PPHelper.ppFromString(s, "data.stats.newFriend").getAsInt());
-            currentUser.setFans(PPHelper.ppFromString(s, "data.stats.fans").getAsInt());
-            currentUser.setNewFans(PPHelper.ppFromString(s, "data.stats.newFans").getAsInt());
-            currentUser.setImToken(PPHelper.ppFromString(s, "data.userInfo.params.im.token").getAsString());
-            currentUser.setImAppKey(PPHelper.ppFromString(s, "data.userInfo.params.im.appKey").getAsString());
-            //pptodo get im_unread_count_int
-            RealmList<Pic> pics = currentUser.getPics();
-            for (JsonElement item : PPHelper.ppFromString(s, "data.userInfo.params.more.pics").getAsJsonArray()) {
-                Pic pic = new Pic();
-                pic.setPath(item.toString());
-                pics.add(pic);
-            }
-            realm.commitTransaction();
-        }
+        PPHelper.startUpOk(s);
 
         Intent intent1 = new Intent(this, TabsActivity.class);
         startActivity(intent1);
