@@ -142,6 +142,7 @@ public class FootprintAllFragment extends Fragment {
                 ftm.setCreateTime(PPHelper.ppFromString(s, "data." + i + ".createTime").getAsLong());
                 ftm.setId(PPHelper.ppFromString(s, "data." + i + ".id").getAsString());
                 ftm.setStatus("net");
+                ftm.setType(PPHelper.ppFromString(s, "data." + i + ".type").getAsInt());
                 ftm.setBody(PPHelper.ppFromString(s, "data." + i + "").getAsJsonObject().toString());
             }
 

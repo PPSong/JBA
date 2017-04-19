@@ -2,16 +2,23 @@ package com.penn.jba.util;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.text.TextUtils;
 import android.util.Log;
 import android.widget.Toast;
 
 import com.facebook.stetho.Stetho;
+import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonPrimitive;
+import com.penn.jba.PPApplication;
 import com.penn.jba.R;
+import com.penn.jba.TabsActivity;
 import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.realm.model.CurrentUserSetting;
+import com.penn.jba.realm.model.Pic;
 import com.uphyca.stetho_realm.RealmInspectorModulesProvider;
 
 import org.json.JSONException;
@@ -22,12 +29,16 @@ import java.text.SimpleDateFormat;
 import java.util.regex.Pattern;
 
 import io.reactivex.Observable;
+import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.functions.Consumer;
+import io.reactivex.functions.Function;
 import io.reactivex.schedulers.Schedulers;
 import io.reactivex.subjects.BehaviorSubject;
 import io.realm.Realm;
 import io.realm.RealmConfiguration;
+import io.realm.RealmList;
+import io.rong.imlib.RongIMClient;
 
 /**
  * Created by penn on 02/04/2017.
@@ -72,7 +83,6 @@ public class PPHelper {
                 } catch (JSONException e) {
                     Log.v("ppLog", "api data error:" + e);
                 }
-                testingInit.onNext(true);
             }
         }
     }
@@ -86,6 +96,19 @@ public class PPHelper {
         final Observable<String> apiResult = PPRetrofit.getInstance().api("user.login", jBody.getJSONObject());
         apiResult
                 .subscribeOn(Schedulers.io())
+                .flatMap(new Function<String, ObservableSource<String>>() {
+                    @Override
+                    public ObservableSource<String> apply(String s) throws Exception {
+                        PPWarn ppWarn = PPHelper.ppWarning(s);
+                        if (ppWarn != null) {
+                            throw new Exception(ppWarn.msg);
+                        }
+
+                        signInOk(activityContext, s, clearData);
+
+                        return PPRetrofit.getInstance().api("user.startup", null);
+                    }
+                })
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribe(
                         new Consumer<String>() {
@@ -94,59 +117,19 @@ public class PPHelper {
 
                                 PPWarn ppWarn = PPHelper.ppWarning(s);
                                 if (ppWarn != null) {
-                                    showPPToast(activityContext, ppWarn.msg, Toast.LENGTH_SHORT);
+                                    PPHelper.showPPToast(activityContext, ppWarn.msg, Toast.LENGTH_SHORT);
 
                                     return;
                                 }
 
-                                String phone = PPHelper.ppFromString(s, "data.extra.0").getAsString();
-                                initRealm(activityContext, phone, clearData);
-                                try (Realm realm = Realm.getDefaultInstance()) {
-                                    realm.beginTransaction();
-
-                                    CurrentUser currentUser = realm.where(CurrentUser.class)
-                                            .findFirst();
-
-                                    CurrentUserSetting currentUserSetting;
-
-                                    if (currentUser == null) {
-                                        //新注册用户或者首次在本手机使用
-                                        currentUser = realm.createObject(CurrentUser.class);
-                                        //默认在足迹页面不是显示我的moment
-                                        currentUserSetting = realm.createObject(CurrentUserSetting.class);
-                                        currentUserSetting.setFootprintMine(false);
-                                    }
-
-                                    currentUser.setUserId(PPHelper.ppFromString(s, "data.userid").getAsString());
-                                    currentUser.setToken(PPHelper.ppFromString(s, "data.token").getAsString());
-                                    currentUser.setTokenTimestamp(PPHelper.ppFromString(s, "data.tokentimestamp").getAsLong());
-                                    currentUser.setPhone(phone);
-                                    currentUser.setNickname(PPHelper.ppFromString(s, "data.extra.1").getAsString());
-                                    currentUser.setGender(PPHelper.ppFromString(s, "data.extra.2").getAsInt());
-                                    currentUser.setBirthday(PPHelper.ppFromString(s, "data.extra.5").getAsLong());
-
-                                    realm.commitTransaction();
-
-                                    //设置PPRetrofit authBody
-                                    try {
-                                        String authBody = new JSONObject()
-                                                .put("userid", currentUser.getUserId())
-                                                .put("token", currentUser.getToken())
-                                                .put("tokentimestamp", currentUser.getTokenTimestamp())
-                                                .toString();
-                                        PPRetrofit.authBody = authBody;
-                                    } catch (JSONException e) {
-                                        Log.v("ppLog", "api data error:" + e);
-                                    }
-                                    testingInit.onNext(true);
-                                }
+                                startUpOk(activityContext, s);
+                                testingInit.onNext(true);
                             }
                         },
                         new Consumer<Throwable>() {
                             public void accept(Throwable t1) {
 
-                                showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
-                                Log.v("ppLog", "error:" + t1.toString());
+                                PPHelper.showPPToast(activityContext, t1.getMessage(), Toast.LENGTH_SHORT);
                                 t1.printStackTrace();
                             }
                         }
@@ -154,9 +137,89 @@ public class PPHelper {
     }
     //pptodo end testing block
 
+    public static void signInOk(Context activityContext, String s, boolean clearData) throws Exception {
+        String phone = PPHelper.ppFromString(s, "data.extra.0").getAsString();
+        PPHelper.initRealm(activityContext, phone, false);
+        try (Realm realm = Realm.getDefaultInstance()) {
+            realm.beginTransaction();
+            if (clearData) {
+                realm.deleteAll();
+            }
+
+            CurrentUser currentUser = realm.where(CurrentUser.class)
+                    .findFirst();
+
+            CurrentUserSetting currentUserSetting;
+
+            if (currentUser == null) {
+                //新注册用户或者首次在本手机使用
+                currentUser = realm.createObject(CurrentUser.class);
+                //默认在足迹页面不是显示我的moment
+                currentUserSetting = realm.createObject(CurrentUserSetting.class);
+                currentUserSetting.setFootprintMine(false);
+            }
+
+            currentUser.setUserId(PPHelper.ppFromString(s, "data.userid").getAsString());
+            currentUser.setToken(PPHelper.ppFromString(s, "data.token").getAsString());
+            currentUser.setTokenTimestamp(PPHelper.ppFromString(s, "data.tokentimestamp").getAsLong());
+
+            realm.commitTransaction();
+
+            //设置PPRetrofit authBody
+            String authBody = new JSONObject()
+                    .put("userid", currentUser.getUserId())
+                    .put("token", currentUser.getToken())
+                    .put("tokentimestamp", currentUser.getTokenTimestamp())
+                    .toString();
+            PPRetrofit.authBody = authBody;
+        }
+    }
+
+    public static void startUpOk(Context activityContext, String s) {
+        String imToken = PPHelper.ppFromString(s, "data.userInfo.params.im.token").getAsString();
+        //connect to rongyun
+        //connect(activityContext, imToken);
+        try (Realm realm = Realm.getDefaultInstance()) {
+            realm.beginTransaction();
+
+            CurrentUser currentUser = realm.where(CurrentUser.class)
+                    .findFirst();
+
+            currentUser.setPhone(PPHelper.ppFromString(s, "data.userInfo.phone").getAsString());
+            currentUser.setNickname(PPHelper.ppFromString(s, "data.userInfo.nickname").getAsString());
+            currentUser.setGender(PPHelper.ppFromString(s, "data.userInfo.gender").getAsInt());
+            currentUser.setBirthday(PPHelper.ppFromString(s, "data.userInfo.birthday").getAsLong());
+            currentUser.setHead(PPHelper.ppFromString(s, "data.userInfo.head").getAsString());
+            currentUser.setBaiduApiUrl(PPHelper.ppFromString(s, "data.settings.geo.api").getAsString());
+            currentUser.setBaiduAkBrowser(PPHelper.ppFromString(s, "data.settings.geo.ak_browser").getAsString());
+            currentUser.setSocketHost(PPHelper.ppFromString(s, "data.settings.socket.host").getAsString());
+            currentUser.setSocketPort(PPHelper.ppFromString(s, "data.settings.socket.port").getAsInt());
+            currentUser.setUnreadMessageMoment(PPHelper.ppFromString(s, "data.stats.message.moment", "int").getAsInt());
+            currentUser.setUnreadMessageIndex(PPHelper.ppFromString(s, "data.stats.message.index", "int").getAsInt());
+            currentUser.setUnreadMessageFriend(PPHelper.ppFromString(s, "data.stats.message.friend", "int").getAsInt());
+            currentUser.setUnreadMessageSystem(PPHelper.ppFromString(s, "data.stats.message.system", "int").getAsInt());
+            currentUser.setFollows(PPHelper.ppFromString(s, "data.stats.follows", "int").getAsInt());
+            currentUser.setNewFriend(PPHelper.ppFromString(s, "data.stats.newFriend", "int").getAsInt());
+            currentUser.setFans(PPHelper.ppFromString(s, "data.stats.fans", "int").getAsInt());
+            currentUser.setNewFans(PPHelper.ppFromString(s, "data.stats.newFans", "int").getAsInt());
+            currentUser.setImToken(imToken);
+            currentUser.setImAppKey(PPHelper.ppFromString(s, "data.userInfo.params.im.appKey").getAsString());
+            //pptodo get im_unread_count_int
+            //pptodo check pic插入realm后与不插入realm时add到pics中有无区别
+            RealmList<Pic> pics = currentUser.getPics();
+            for (JsonElement item : PPHelper.ppFromString(s, "data.userInfo.params.more.pics", "array").getAsJsonArray()) {
+                Pic pic = new Pic();
+                pic.setPath(item.toString());
+                pics.add(pic);
+            }
+            realm.commitTransaction();
+        }
+    }
+
     public static void initRealm(Context context, String phone, boolean clearData) {
         Realm.init(context);
         RealmConfiguration config = new RealmConfiguration.Builder()
+                .deleteRealmIfMigrationNeeded()
                 .name(phone + ".realm")
                 .build();
         //清除当前用户的数据文件, 测试用
@@ -261,6 +324,23 @@ public class PPHelper {
             return null;
         }
     }
+
+    public static JsonElement ppFromString(String json, String path, String type) {
+        JsonElement jsonElement = ppFromString(json, path);
+        if (jsonElement == null) {
+            switch (type){
+                case "array":
+                    return new JsonArray();
+                case "int":
+                    return new JsonPrimitive(0);
+                default:
+                    return null;
+            }
+        }
+
+        return jsonElement;
+    }
+
 
     public static JsonElement ppFromString(String json, String path) {
         try {

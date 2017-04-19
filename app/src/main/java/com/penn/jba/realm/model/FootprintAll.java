@@ -13,6 +13,14 @@ public class FootprintAll extends RealmObject {
 
     private long createTime;
 
+    private String id;
+
+    private String status; //local, net, failed 暂时没用, 因为footprintAll中不包含自己创建的moment
+
+    private int type;
+
+    private String body;
+
     public String getHash() {
         return hash;
     }
@@ -53,9 +61,11 @@ public class FootprintAll extends RealmObject {
         this.body = body;
     }
 
-    private String id;
+    public int getType() {
+        return type;
+    }
 
-    private String status; //local, net, failed
-
-    private String body;
+    public void setType(int type) {
+        this.type = type;
+    }
 }

@@ -1,6 +1,7 @@
 package com.penn.jba;
 
 import android.support.v7.widget.RecyclerView;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -8,6 +9,7 @@ import android.widget.TextView;
 
 import com.penn.jba.realm.model.FootprintAll;
 import com.penn.jba.realm.model.FootprintMine;
+import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPLoadAdapter;
 
 import java.util.List;
@@ -23,21 +25,31 @@ public class FootprintAllAdapter extends PPLoadAdapter<FootprintAll> {
 
     @Override
     public int getRealItemViewType(FootprintAll footprintAll) {
-        //因为my moment只有一种, 所以可以用任意非0数值
-        return 3;
+        return footprintAll.getType();
     }
 
     @Override
     public RecyclerView.ViewHolder onCreateRealViewHolder(ViewGroup parent, int viewType) {
-        View v = LayoutInflater.from(parent.getContext()).inflate(
-                R.layout.list_row_my_moment, parent, false);
+
+        int layoutId = 0;
+
+        switch (viewType) {
+            case 8:
+                layoutId = R.layout.footprint_type8;
+                break;
+            default:
+                layoutId = R.layout.list_row_all_moment;
+                Log.v("pplog", "viewType not found:" + viewType);
+        }
+
+        View v = LayoutInflater.from(parent.getContext()).inflate(layoutId, parent, false);
 
         return new PPViewHolder(v);
     }
 
     @Override
     public void onBindRealViewHolder(RecyclerView.ViewHolder holder, int position) {
-        ((PPViewHolder) holder).mainText.setText(data.get(position).getHash());
+        //((PPViewHolder) holder).mainText.setText(data.get(position).getHash());
     }
 
     public static class PPViewHolder extends RecyclerView.ViewHolder {
