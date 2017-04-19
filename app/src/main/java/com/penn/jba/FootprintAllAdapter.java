@@ -1,5 +1,8 @@
 package com.penn.jba;
 
+import android.content.ClipData;
+import android.databinding.DataBindingUtil;
+import android.databinding.ViewDataBinding;
 import android.support.v7.widget.RecyclerView;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -30,34 +33,53 @@ public class FootprintAllAdapter extends PPLoadAdapter<FootprintAll> {
 
     @Override
     public RecyclerView.ViewHolder onCreateRealViewHolder(ViewGroup parent, int viewType) {
-
-        int layoutId = 0;
+        View v;
 
         switch (viewType) {
             case 8:
-                layoutId = R.layout.footprint_type8;
-                break;
+                v = LayoutInflater.from(parent.getContext()).inflate(R.layout.footprint_type8, parent, false);
+
+                return new PPViewHolder8(v, viewType);
             default:
-                layoutId = R.layout.list_row_all_moment;
                 Log.v("pplog", "viewType not found:" + viewType);
+                v = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_row_all_moment, parent, false);
+
+                return new PPViewHolder(v, viewType);
         }
-
-        View v = LayoutInflater.from(parent.getContext()).inflate(layoutId, parent, false);
-
-        return new PPViewHolder(v);
     }
 
     @Override
     public void onBindRealViewHolder(RecyclerView.ViewHolder holder, int position) {
-        //((PPViewHolder) holder).mainText.setText(data.get(position).getHash());
+        if (holder instanceof PPViewHolder8) {
+            ((PPViewHolder8) holder).bind(data.get(position).getHash());
+        } else {
+            ((PPViewHolder) holder).bind("test");
+        }
     }
 
     public static class PPViewHolder extends RecyclerView.ViewHolder {
-        public TextView mainText;
+        TextView mainText;
 
-        public PPViewHolder(View v) {
+        public PPViewHolder(View v, int type) {
             super(v);
             mainText = (TextView) v.findViewById(R.id.main_text);
+        }
+
+        public void bind(String s) {
+            mainText.setText(s);
+        }
+    }
+
+    public static class PPViewHolder8 extends RecyclerView.ViewHolder {
+        TextView mainText;
+
+        public PPViewHolder8(View v, int type) {
+            super(v);
+            mainText = (TextView) v.findViewById(R.id.content_tv);
+        }
+
+        public void bind(String s) {
+            mainText.setText(s);
         }
     }
 }

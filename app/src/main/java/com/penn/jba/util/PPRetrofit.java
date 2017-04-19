@@ -62,8 +62,8 @@ public class PPRetrofit
 
     private OkHttpClient getRequestHeader() {
         OkHttpClient httpClient = new OkHttpClient.Builder()
-                .readTimeout(3, TimeUnit.SECONDS)
-                .connectTimeout(3, TimeUnit.SECONDS)
+                .readTimeout(10, TimeUnit.SECONDS)
+                .connectTimeout(10, TimeUnit.SECONDS)
                 .build();
 
         return httpClient;
