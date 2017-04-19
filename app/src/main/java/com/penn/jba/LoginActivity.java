@@ -288,7 +288,7 @@ public class LoginActivity extends AppCompatActivity {
     }
 
     private void startUpOk(String s) {
-        PPHelper.startUpOk(s);
+        PPHelper.startUpOk(this, s);
 
         Intent intent1 = new Intent(this, TabsActivity.class);
         startActivity(intent1);
