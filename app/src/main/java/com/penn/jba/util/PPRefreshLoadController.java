@@ -65,6 +65,7 @@ public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRe
     }
 
     public void noMore() {
+        Log.v("pplog17", "no more");
         noMore = true;
     }
 
@@ -82,8 +83,9 @@ public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRe
 
     public abstract void doLoadMore();
 
-    public void loadMore(RecyclerView recyclerView) {
+    public  void loadMore(RecyclerView recyclerView) {
         if (!loading) {
+            Log.v("pplog17", "loadMore");
             begin();
             final PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
             tmp.needLoadMoreCell();

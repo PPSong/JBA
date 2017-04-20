@@ -52,6 +52,8 @@ public class PPHelper {
     public static String currentUserId;
 
     //pptodo remove testing block
+    public static int testCount = 0;
+
     public static BehaviorSubject<Boolean> testingInit = BehaviorSubject.<Boolean>create();
 
     public static Toast ppToast;

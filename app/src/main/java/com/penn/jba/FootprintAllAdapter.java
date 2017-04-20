@@ -12,6 +12,8 @@ import android.widget.TextView;
 
 import com.penn.jba.databinding.FootprintType1Binding;
 import com.penn.jba.databinding.FootprintType8Binding;
+import com.penn.jba.databinding.FootprintType9Binding;
+import com.penn.jba.databinding.ListRowAllMomentBinding;
 import com.penn.jba.realm.model.FootprintAll;
 import com.penn.jba.realm.model.FootprintMine;
 import com.penn.jba.util.PPHelper;
@@ -44,67 +46,79 @@ public class FootprintAllAdapter extends PPLoadAdapter<FootprintAll> {
 
     @Override
     public RecyclerView.ViewHolder onCreateRealViewHolder(ViewGroup parent, int viewType) {
-        View v;
         LayoutInflater layoutInflater = LayoutInflater.from(parent.getContext());
-        ViewDataBinding binding;
 
         switch (viewType) {
             case 8:
-                binding = DataBindingUtil.inflate(
-                        layoutInflater, R.layout.footprint_type8, parent, false);
-
-                FootprintType8Binding binding1 = FootprintType8Binding.inflate(layoutInflater);
-                return new MyViewHolder(binding1);
-            case 1:
-                binding = DataBindingUtil.inflate(
-                        layoutInflater, R.layout.footprint_type1, parent, false);
-                return new MyViewHolder(binding);
+                FootprintType8Binding binding8 = FootprintType8Binding.inflate(layoutInflater, parent, false);
+                return new FootprintType8ViewHolder(binding8);
+            case 9:
+                FootprintType9Binding binding9 = FootprintType9Binding.inflate(layoutInflater, parent, false);
+                return new FootprintType9ViewHolder(binding9);
             default:
-                Log.v("pplog", "viewType not found:" + viewType);
-                v = LayoutInflater.from(parent.getContext()).inflate(R.layout.list_row_all_moment, parent, false);
-
-                return new PPViewHolder(v, viewType);
+                ListRowAllMomentBinding binding = ListRowAllMomentBinding.inflate(layoutInflater, parent, false);
+                return new PPViewHolder(binding);
         }
     }
 
     @Override
     public void onBindRealViewHolder(RecyclerView.ViewHolder holder, int position) {
-        if (holder instanceof MyViewHolder) {
-            ((MyViewHolder) holder).bind(data.get(position));
+        if (holder instanceof FootprintType8ViewHolder) {
+            ((FootprintType8ViewHolder) holder).bind(data.get(position));
+        } else if (holder instanceof FootprintType9ViewHolder) {
+            ((FootprintType9ViewHolder) holder).bind(data.get(position));
         } else {
-            ((PPViewHolder) holder).bind("test");
+            ((PPViewHolder) holder).bind(data.get(position));
         }
     }
 
     public static class PPViewHolder extends RecyclerView.ViewHolder {
-        TextView mainText;
+        private final ListRowAllMomentBinding binding;
 
-        public PPViewHolder(View v, int type) {
-            super(v);
-            mainText = (TextView) v.findViewById(R.id.main_text);
-        }
-
-        public void bind(String s) {
-            mainText.setText(s);
-        }
-    }
-
-    public class MyViewHolder extends RecyclerView.ViewHolder {
-        private final ViewDataBinding binding;
-
-        public MyViewHolder(ViewDataBinding binding) {
+        public PPViewHolder(ListRowAllMomentBinding binding) {
             super(binding.getRoot());
             this.binding = binding;
         }
 
         public void bind(FootprintAll ft) {
-            binding.setVariable(BR.presenter, ft);
+            binding.setPresenter(ft);
             binding.executePendingBindings();
+        }
+    }
 
-            if (ft.getType() == 8) {
-                ((FootprintType8Binding) binding).timeLineInclude.timeTv.setReferenceTime(new Date().getTime());
-                Picasso.with(PPApplication.getContext()).load(PPHelper.getImageUrl(ft.getAvatarName())).placeholder(R.drawable.profile).into(((FootprintType8Binding) binding).avatarImg);
-            }
+    public class FootprintType8ViewHolder extends RecyclerView.ViewHolder {
+        private final FootprintType8Binding binding;
+
+        public FootprintType8ViewHolder(FootprintType8Binding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+
+        public void bind(FootprintAll ft) {
+            binding.setPresenter(ft);
+            binding.executePendingBindings();
+            binding.timeLineInclude.timeTv.setReferenceTime(ft.getCreateTime());
+            Picasso.with(PPApplication.getContext())
+                    .load(PPHelper.getImageUrl(ft.getAvatarName()))
+                    .placeholder(R.drawable.profile).into(binding.avatarImg);
+        }
+    }
+
+    public class FootprintType9ViewHolder extends RecyclerView.ViewHolder {
+        private final FootprintType9Binding binding;
+
+        public FootprintType9ViewHolder(FootprintType9Binding binding) {
+            super(binding.getRoot());
+            this.binding = binding;
+        }
+
+        public void bind(FootprintAll ft) {
+            binding.setPresenter(ft);
+            binding.executePendingBindings();
+            binding.timeLineInclude.timeTv.setReferenceTime(ft.getCreateTime());
+            Picasso.with(PPApplication.getContext())
+                    .load(PPHelper.getImageUrl(ft.getAvatarName()))
+                    .placeholder(R.drawable.profile).into(binding.avatarImg);
         }
     }
 }

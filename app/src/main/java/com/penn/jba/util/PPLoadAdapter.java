@@ -12,6 +12,8 @@ import android.widget.Toast;
 
 import com.penn.jba.R;
 
+import org.w3c.dom.Text;
+
 import java.util.List;
 
 /**
@@ -45,8 +47,6 @@ public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
         }
     }
 
-    abstract public int getRealItemViewType(T t);
-
     @Override
     public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent,
                                                       int viewType) {
@@ -62,18 +62,22 @@ public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
         return vh;
     }
 
-    abstract public RecyclerView.ViewHolder onCreateRealViewHolder(ViewGroup parent, int viewType);
-
     @Override
     public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+//        if (getItemViewType(position) == VIEW_PROG) {
+//            ((ProgressViewHolder) holder).progressBar.setIndeterminate(true);
+//            ((ProgressViewHolder) holder).bind();
+//        } else {
+//            onBindRealViewHolder(holder, position);
+//        }
+
         if (holder instanceof ProgressViewHolder) {
             ((ProgressViewHolder) holder).progressBar.setIndeterminate(true);
+            ((ProgressViewHolder) holder).bind();
         } else {
             onBindRealViewHolder(holder, position);
         }
     }
-
-    abstract public void onBindRealViewHolder(RecyclerView.ViewHolder holder, int position);
 
     @Override
     public int getItemCount() {
@@ -81,15 +85,29 @@ public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
         if (loadMoreCell) {
             i = i + 1;
         }
+
         return i;
     }
 
     public static class ProgressViewHolder extends RecyclerView.ViewHolder {
         public ProgressBar progressBar;
+        public TextView tv;
+        public int number = PPHelper.testCount++;
 
         public ProgressViewHolder(View v) {
             super(v);
             progressBar = (ProgressBar) v.findViewById(R.id.progressBar1);
+            tv = (TextView) v.findViewById(R.id.number);
+        }
+
+        public void bind() {
+            tv.setText("" + number);
         }
     }
+
+    abstract public int getRealItemViewType(T t);
+
+    abstract public RecyclerView.ViewHolder onCreateRealViewHolder(ViewGroup parent, int viewType);
+
+    abstract public void onBindRealViewHolder(RecyclerView.ViewHolder holder, int position);
 }

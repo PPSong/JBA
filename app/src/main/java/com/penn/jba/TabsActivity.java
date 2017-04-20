@@ -75,7 +75,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
         super.onCreate(savedInstanceState);
 
         //pptodo remove this testing entry
-        if (true) {
+        if (false) {
             disposableList.add(PPHelper.testingInit
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())

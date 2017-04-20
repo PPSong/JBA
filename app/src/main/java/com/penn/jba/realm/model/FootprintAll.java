@@ -87,12 +87,33 @@ public class FootprintAll extends RealmObject {
             } else {
                 return nicknameA + PPApplication.getContext().getString(R.string.send_a_mail_to_me);
             }
+        } else if (type == 9) {
+            String idA = PPHelper.ppFromString(body, "detail.createdBy").getAsString();
+            String idB = PPHelper.ppFromString(body, "detail.receivedBy").getAsString();
+            String nicknameA = PPHelper.ppFromString(body, "relatedUsers.0.nickname").getAsString();
+            String nicknameB = PPHelper.ppFromString(body, "relatedUsers.1.nickname").getAsString();
+            if (idA == PPHelper.currentUserId) {
+                String i_reply_to_sb = PPApplication.getContext().getString(R.string.i_reply_to_sb);
+                return String.format(i_reply_to_sb, nicknameB);
+            } else {
+                String sb_reply_to_me = PPApplication.getContext().getString(R.string.sb_reply_to_me);
+                return String.format(sb_reply_to_me, nicknameA);
+            }
         }
         return "no type";
     }
 
     public String getAvatarName() {
         if (type == 8) {
+            String idA = PPHelper.ppFromString(body, "detail.createdBy").getAsString();
+            String idB = PPHelper.ppFromString(body, "detail.receivedBy").getAsString();
+
+            if (idA == PPHelper.currentUserId) {
+                return PPHelper.ppFromString(body, "relatedUsers.1.head").getAsString();
+            } else {
+                return PPHelper.ppFromString(body, "relatedUsers.0.head").getAsString();
+            }
+        } else if (type == 9) {
             String idA = PPHelper.ppFromString(body, "detail.createdBy").getAsString();
             String idB = PPHelper.ppFromString(body, "detail.receivedBy").getAsString();
 

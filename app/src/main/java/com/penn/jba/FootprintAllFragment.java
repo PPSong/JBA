@@ -38,6 +38,8 @@ import io.realm.RealmResults;
 import io.realm.Sort;
 
 public class FootprintAllFragment extends Fragment {
+    private final static int pageSize = 15;
+
     private Context activityContext;
 
     private Realm realm;
@@ -148,6 +150,7 @@ public class FootprintAllFragment extends Fragment {
 
             realm.commitTransaction();
 
+            Log.v("pplog17", "processFootprintAll:" + realNum);
             return realNum;
         }
     }
@@ -226,7 +229,7 @@ public class FootprintAllFragment extends Fragment {
                             if (ppWarn != null) {
                                 return ppWarn.msg;
                             } else {
-                                if (processFootprintAll(s, false) == 0) {
+                                if (processFootprintAll(s, false) < pageSize) {
                                     noMore();
                                 }
 
@@ -244,9 +247,16 @@ public class FootprintAllFragment extends Fragment {
                                         return;
                                     }
 
-                                    PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
+                                    final PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
                                     tmp.cancelLoadMoreCell();
                                     tmp.notifyItemRemoved(tmp.data.size());
+//                                    recyclerView.post(new Runnable() {
+//                                        @Override
+//                                        public void run() {
+//                                            Log.v("pplog17", "notifyItemRemoved:" + (tmp.data.size()));
+//                                            tmp.notifyItemRemoved(tmp.data.size());
+//                                        }
+//                                    });
                                     end();
                                 }
                             },

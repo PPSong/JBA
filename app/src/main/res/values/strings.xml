@@ -54,5 +54,7 @@
     <string name="all">所有</string>
     <string name="i_send_a_mail_to">我寄了一封信给</string>
     <string name="send_a_mail_to_me">寄了一封信给我</string>
+    <string name="i_reply_to_sb">我和%1$s回信了</string>
+    <string name="sb_reply_to_me">%1$s给我回信了</string>
 
 </resources>
