@@ -57,7 +57,7 @@
                 app:layout_constraintRight_toLeftOf="@+id/avatar_img"
                 app:layout_constraintTop_toTopOf="parent" />
 
-            <de.hdodenhof.circleimageview.CircleImageView
+            <ImageView
                 android:id="@+id/avatar_img"
                 android:layout_width="64dp"
                 android:layout_height="64dp"
@@ -68,8 +68,6 @@
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintRight_toRightOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
-
         </android.support.constraint.ConstraintLayout>
-        
     </android.support.constraint.ConstraintLayout>
 </layout>

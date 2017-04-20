@@ -47,11 +47,18 @@ import io.rong.imlib.RongIMClient;
 public class PPHelper {
     //秒
     public static final int REQUEST_VERIFY_CODE_INTERVAL = 5;
+    public static final String qiniuBase = "http://7xu8w0.com1.z0.glb.clouddn.com/";
+
+    public static String currentUserId;
 
     //pptodo remove testing block
     public static BehaviorSubject<Boolean> testingInit = BehaviorSubject.<Boolean>create();
 
     public static Toast ppToast;
+
+    public static String getImageUrl(String imageName) {
+        return qiniuBase + imageName + "?imageView2/1/w/80/h/80/interlace/1/";
+    }
 
     public static void showPPToast(Context context, String msg, int length) {
         if (ppToast != null) {
@@ -172,6 +179,7 @@ public class PPHelper {
                     .put("tokentimestamp", currentUser.getTokenTimestamp())
                     .toString();
             PPRetrofit.authBody = authBody;
+            PPHelper.currentUserId = currentUser.getUserId();
         }
     }
 
@@ -328,7 +336,7 @@ public class PPHelper {
     public static JsonElement ppFromString(String json, String path, String type) {
         JsonElement jsonElement = ppFromString(json, path);
         if (jsonElement == null) {
-            switch (type){
+            switch (type) {
                 case "array":
                     return new JsonArray();
                 case "int":

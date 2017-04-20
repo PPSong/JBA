@@ -1,5 +1,12 @@
 package com.penn.jba.realm.model;
 
+import android.content.res.Resources;
+import android.util.Log;
+
+import com.penn.jba.PPApplication;
+import com.penn.jba.R;
+import com.penn.jba.util.PPHelper;
+
 import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
 
@@ -67,5 +74,34 @@ public class FootprintAll extends RealmObject {
 
     public void setType(int type) {
         this.type = type;
+    }
+
+    public String getContent() {
+        if (type == 8) {
+            String idA = PPHelper.ppFromString(body, "detail.createdBy").getAsString();
+            String idB = PPHelper.ppFromString(body, "detail.receivedBy").getAsString();
+            String nicknameA = PPHelper.ppFromString(body, "relatedUsers.0.nickname").getAsString();
+            String nicknameB = PPHelper.ppFromString(body, "relatedUsers.1.nickname").getAsString();
+            if (idA == PPHelper.currentUserId) {
+                return PPApplication.getContext().getString(R.string.i_send_a_mail_to) + nicknameB;
+            } else {
+                return nicknameA + PPApplication.getContext().getString(R.string.send_a_mail_to_me);
+            }
+        }
+        return "no type";
+    }
+
+    public String getAvatarName() {
+        if (type == 8) {
+            String idA = PPHelper.ppFromString(body, "detail.createdBy").getAsString();
+            String idB = PPHelper.ppFromString(body, "detail.receivedBy").getAsString();
+
+            if (idA == PPHelper.currentUserId) {
+                return PPHelper.ppFromString(body, "relatedUsers.1.head").getAsString();
+            } else {
+                return PPHelper.ppFromString(body, "relatedUsers.0.head").getAsString();
+            }
+        }
+        return "no avatar";
     }
 }

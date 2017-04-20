@@ -36,6 +36,7 @@ import com.penn.jba.databinding.ActivityLoginBinding;
 import com.penn.jba.databinding.ActivityTabsBinding;
 import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.realm.model.CurrentUserSetting;
+import com.penn.jba.realm.model.FootprintAll;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPRetrofit;
 import com.squareup.picasso.Picasso;
@@ -126,6 +127,18 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                 binding.toolbar.setTitle(adapterViewPager.getPageTitle(1));
                 drawerResult.closeDrawer();
                 break;
+            case 3:
+                //test
+                try (Realm realm = Realm.getDefaultInstance()) {
+                    realm.beginTransaction();
+
+                    FootprintAll footprintAll = realm.where(FootprintAll.class)
+                            .findFirst();
+                    footprintAll.setBody("test");
+                    realm.commitTransaction();
+                }
+                drawerResult.closeDrawer();
+                break;
             default:
         }
         // do something with the clicked item :D
@@ -152,6 +165,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
         //if you want to update the items at a later time it is recommended to keep it in a variable
         PrimaryDrawerItem item1 = new PrimaryDrawerItem().withIdentifier(1).withName(R.string.footprint).withIcon(R.drawable.ic_collections_black_24dp);
         PrimaryDrawerItem item2 = new PrimaryDrawerItem().withIdentifier(2).withName(R.string.nearby).withIcon(R.drawable.ic_near_me_black_24dp);
+        PrimaryDrawerItem item3 = new PrimaryDrawerItem().withIdentifier(3).withName("test").withIcon(R.drawable.ic_near_me_black_24dp);
 
         PrimaryDrawerItem item0 = new PrimaryDrawerItem().withIdentifier(0).withName(R.string.logout).withIcon(R.drawable.ic_eject_black_24dp);
 
@@ -193,7 +207,8 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                 .addDrawerItems(
                         item1,
                         new DividerDrawerItem(),
-                        item2
+                        item2,
+                        item3
                 )
                 .withOnDrawerItemClickListener(this)
                 .build();

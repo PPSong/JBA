@@ -52,5 +52,7 @@
     <string name="logout">注销</string>
     <string name="mine">我的</string>
     <string name="all">所有</string>
+    <string name="i_send_a_mail_to">我寄了一封信给</string>
+    <string name="send_a_mail_to_me">寄了一封信给我</string>
 
 </resources>
