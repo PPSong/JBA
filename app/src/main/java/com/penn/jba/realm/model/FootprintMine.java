@@ -10,6 +10,7 @@ import com.penn.jba.util.PPHelper;
 
 import java.util.ArrayList;
 
+import io.realm.RealmList;
 import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
 
@@ -23,16 +24,21 @@ import static com.penn.jba.util.PPHelper.ppFromString;
 public class FootprintMine extends RealmObject {
     @PrimaryKey
     private String hash;
-
     private long createTime;
-
     private String id;
-
     private String status; //local, net, failed
-
     private int type;
-
     private String body;
+
+    private RealmList<Pic> pics;
+
+    public RealmList<Pic> getPics() {
+        return pics;
+    }
+
+    public void setPics(RealmList<Pic> pics) {
+        this.pics = pics;
+    }
 
     public String getHash() {
         return hash;

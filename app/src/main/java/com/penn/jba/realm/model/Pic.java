@@ -10,6 +10,24 @@ import io.realm.annotations.PrimaryKey;
 public class Pic extends RealmObject {
     @PrimaryKey
     private String path;
+    private int status; //1:local, 2:net
+    private byte[] data;
+
+    public byte[] getData() {
+        return data;
+    }
+
+    public void setData(byte[] data) {
+        this.data = data;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
+    }
 
     public String getPath() {
         return path;
