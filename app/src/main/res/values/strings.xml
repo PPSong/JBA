@@ -56,5 +56,10 @@
     <string name="send_a_mail_to_me">寄了一封信给我</string>
     <string name="i_reply_to_sb">我和%1$s回信了</string>
     <string name="sb_reply_to_me">%1$s给我回信了</string>
+    <string name="i_follow_to_sb">我关注了%1$s%2$s</string>
+    <string name="be_friend">, 并成为好友</string>
+    <string name="sb_follow_to_me">%1$s关注了我%2$s</string>
+    <string name="daily_report">今天我被%1$d人迹录了片刻, 迹录了%2$d次他人的片刻, 增加了%3$d个新粉丝</string>
+    <string name="welcome">欢迎第一次来到迹伴</string>
 
 </resources>

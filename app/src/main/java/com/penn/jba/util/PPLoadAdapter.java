@@ -21,7 +21,7 @@ import java.util.List;
  */
 
 public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
-    private final int VIEW_PROG = 0;
+    private final int VIEW_PROG = -1;
     private boolean loadMoreCell = false;
 
     public List<T> data;

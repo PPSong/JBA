@@ -80,7 +80,7 @@ public class FootprintAllFragment extends Fragment {
         footprintAlls.addChangeListener(changeListener);
 
         binding.mainRv.setLayoutManager(new LinearLayoutManager(getActivity()));
-        footprintAllAdapter = new FootprintAllAdapter(footprintAlls);
+        footprintAllAdapter = new FootprintAllAdapter(activityContext, footprintAlls);
         binding.mainRv.setAdapter(footprintAllAdapter);
 
         binding.mainRv.setHasFixedSize(true);

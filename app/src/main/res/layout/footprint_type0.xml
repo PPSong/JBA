@@ -30,13 +30,13 @@
 
         <android.support.constraint.ConstraintLayout
             android:id="@+id/constraintLayout"
+            android:background="@color/colorAccent"
             android:layout_width="0dp"
             android:layout_height="100dp"
             android:layout_marginBottom="0dp"
             android:layout_marginLeft="0dp"
             android:layout_marginRight="8dp"
             android:layout_marginTop="0dp"
-            android:background="@color/accent"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintLeft_toRightOf="@+id/time_line_include"
             app:layout_constraintRight_toRightOf="parent"
@@ -55,20 +55,10 @@
                 android:text="@{presenter.getContent()}"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintLeft_toLeftOf="parent"
-                app:layout_constraintRight_toLeftOf="@+id/avatar_img"
-                app:layout_constraintTop_toTopOf="parent" />
+                app:layout_constraintTop_toTopOf="parent"
+                app:layout_constraintRight_toRightOf="parent" />
 
-            <de.hdodenhof.circleimageview.CircleImageView
-                android:id="@+id/avatar_img"
-                android:layout_width="64dp"
-                android:layout_height="64dp"
-                android:layout_marginBottom="8dp"
-                android:layout_marginRight="8dp"
-                android:layout_marginTop="8dp"
-                android:background="@color/colorPrimary"
-                app:layout_constraintBottom_toBottomOf="parent"
-                app:layout_constraintRight_toRightOf="parent"
-                app:layout_constraintTop_toTopOf="parent" />
         </android.support.constraint.ConstraintLayout>
+
     </android.support.constraint.ConstraintLayout>
 </layout>

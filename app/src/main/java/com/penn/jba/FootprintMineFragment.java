@@ -78,7 +78,7 @@ public class FootprintMineFragment extends Fragment {
         footprintMines.addChangeListener(changeListener);
 
         binding.mainRv.setLayoutManager(new LinearLayoutManager(getActivity()));
-        footprintMineAdapter = new FootprintMineAdapter(footprintMines);
+        footprintMineAdapter = new FootprintMineAdapter(activityContext, footprintMines);
         binding.mainRv.setAdapter(footprintMineAdapter);
         ppRefreshLoadController = new InnerPPRefreshLoadController(binding.mainSwipeRefreshLayout, binding.mainRv);
 
@@ -139,6 +139,7 @@ public class FootprintMineFragment extends Fragment {
                 ftm.setCreateTime(PPHelper.ppFromString(s, "data." + i + ".createTime").getAsLong());
                 ftm.setId(PPHelper.ppFromString(s, "data." + i + ".id").getAsString());
                 ftm.setStatus("net");
+                ftm.setType(PPHelper.ppFromString(s, "data." + i + ".type").getAsInt());
                 ftm.setBody(PPHelper.ppFromString(s, "data." + i + "").getAsJsonObject().toString());
             }
             realm.commitTransaction();

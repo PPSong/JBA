@@ -6,6 +6,7 @@ import android.os.Bundle;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -88,10 +89,12 @@ public class FootprintFragment extends Fragment {
                     .findFirst();
 
             if (change) {
+                Log.v("pplog19", "changed");
                 //更新当前用户的setting
                 currentUserSetting.setFootprintMine(!currentUserSetting.isFootprintMine());
             }
 
+            Log.v("pplog19", "currentUserSetting.isFootprintMine():" + currentUserSetting.isFootprintMine());
             if (currentUserSetting.isFootprintMine()) {
                 menu.getItem(0).setIcon(R.drawable.ic_photo_black_24dp);
                 binding.mainViewPager.setCurrentItem(0, false);

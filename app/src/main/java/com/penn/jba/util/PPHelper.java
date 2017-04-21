@@ -28,6 +28,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.regex.Pattern;
 
+import de.jonasrottmann.realmbrowser.RealmBrowser;
 import io.reactivex.Observable;
 import io.reactivex.ObservableSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
@@ -51,24 +52,20 @@ public class PPHelper {
 
     public static String currentUserId;
 
-    //pptodo remove testing block
-    public static int testCount = 0;
-
     public static BehaviorSubject<Boolean> testingInit = BehaviorSubject.<Boolean>create();
 
     public static Toast ppToast;
 
-    public static String getImageUrl(String imageName) {
-        return qiniuBase + imageName + "?imageView2/1/w/80/h/80/interlace/1/";
-    }
+    public static final int MomentGridViewWidth = 192;
 
-    public static void showPPToast(Context context, String msg, int length) {
-        if (ppToast != null) {
-            ppToast.cancel();
+    //pptodo remove testing block
+    public static int testCount = 0;
+
+    public static void startRealmModelsActivity(Context context) {
+        try (Realm realm = Realm.getDefaultInstance()) {
+            RealmConfiguration configuration = realm.getConfiguration();
+            RealmBrowser.startRealmModelsActivity(context, configuration);
         }
-
-        ppToast = Toast.makeText(context, msg, length);
-        ppToast.show();
     }
 
     public static void ppTestInit(Context context, String phone, String pwd, boolean clearData) {
@@ -145,6 +142,21 @@ public class PPHelper {
                 );
     }
     //pptodo end testing block
+
+    public static String getImageUrl(String imageName) {
+        //Log.v("pplog20", "" + qiniuBase + imageName + "?imageView2/1/w/80/h/80/interlace/1/");
+        return qiniuBase + imageName + "?imageView2/1/w/80/h/80/interlace/1/";
+    }
+
+    public static void showPPToast(Context context, String msg, int length) {
+        if (ppToast != null) {
+            ppToast.cancel();
+        }
+
+        ppToast = Toast.makeText(context, msg, length);
+        ppToast.show();
+    }
+
 
     public static void signInOk(Context activityContext, String s, boolean clearData) throws Exception {
         String phone = PPHelper.ppFromString(s, "data.extra.0").getAsString();

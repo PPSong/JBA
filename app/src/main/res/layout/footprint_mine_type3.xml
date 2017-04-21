@@ -7,7 +7,7 @@
 
         <variable
             name="presenter"
-            type="com.penn.jba.realm.model.FootprintAll" />
+            type="com.penn.jba.realm.model.FootprintMine" />
 
     </data>
 

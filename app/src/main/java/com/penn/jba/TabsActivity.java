@@ -9,6 +9,8 @@ import android.os.Bundle;
 import android.support.annotation.IdRes;
 import android.support.annotation.NonNull;
 import android.support.design.widget.BottomNavigationView;
+import android.support.design.widget.FloatingActionButton;
+import android.support.design.widget.Snackbar;
 import android.support.v4.app.Fragment;
 import android.support.v4.app.FragmentManager;
 import android.support.v4.app.FragmentPagerAdapter;
@@ -21,6 +23,7 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.jakewharton.rxbinding2.view.RxView;
 import com.mikepenz.materialdrawer.AccountHeader;
 import com.mikepenz.materialdrawer.AccountHeaderBuilder;
 import com.mikepenz.materialdrawer.Drawer;
@@ -45,6 +48,7 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.util.ArrayList;
+import java.util.concurrent.TimeUnit;
 import java.util.zip.Inflater;
 
 import io.reactivex.Observable;
@@ -75,7 +79,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
         super.onCreate(savedInstanceState);
 
         //pptodo remove this testing entry
-        if (false) {
+        if (true) {
             disposableList.add(PPHelper.testingInit
                     .subscribeOn(Schedulers.io())
                     .observeOn(AndroidSchedulers.mainThread())
@@ -129,14 +133,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
                 break;
             case 3:
                 //test
-                try (Realm realm = Realm.getDefaultInstance()) {
-                    realm.beginTransaction();
-
-                    FootprintAll footprintAll = realm.where(FootprintAll.class)
-                            .findFirst();
-                    footprintAll.setBody("test");
-                    realm.commitTransaction();
-                }
+                PPHelper.startRealmModelsActivity(this);
                 drawerResult.closeDrawer();
                 break;
             default:
@@ -181,7 +178,7 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
             }
         });
 
-        profileDrawerItem =  new ProfileDrawerItem();
+        profileDrawerItem = new ProfileDrawerItem();
 
         // Create the AccountHeader
         headerResult = new AccountHeaderBuilder()
@@ -215,6 +212,22 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
 
         drawerResult.addStickyFooterItem(item0);
         updateProfile();
+
+        //登录按钮监控
+        Observable<Object> signInButtonObservable = RxView.clicks(binding.createMomentBt)
+                .debounce(200, TimeUnit.MILLISECONDS);
+
+        disposableList.add(signInButtonObservable
+                .subscribeOn(AndroidSchedulers.mainThread())
+                .observeOn(Schedulers.io())
+                .subscribe(
+                        new Consumer<Object>() {
+                            public void accept(Object o) {
+                                Log.v("pplog", "test");
+                            }
+                        }
+                )
+        );
     }
 
     private void updateProfile() {

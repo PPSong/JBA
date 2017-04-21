@@ -52,7 +52,7 @@
                 android:layout_marginTop="8dp"
                 android:background="@color/md_yellow_50"
                 android:gravity="center|left"
-                android:text="@{presenter.getHash()}"
+                android:text="@{presenter.getContent()}"
                 app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintLeft_toLeftOf="parent"
                 app:layout_constraintRight_toLeftOf="@+id/avatar_img"

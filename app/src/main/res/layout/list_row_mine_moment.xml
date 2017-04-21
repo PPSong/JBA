@@ -6,7 +6,7 @@
 
         <variable
             name="presenter"
-            type="com.penn.jba.realm.model.FootprintAll" />
+            type="com.penn.jba.realm.model.FootprintMine" />
 
     </data>
 
@@ -17,7 +17,7 @@
 
         <TextView
             android:id="@+id/main_text"
-            android:text="@{presenter.getContent()}"
+            android:text="@{presenter.getHash()}"
             android:layout_width="wrap_content"
             android:layout_height="100dp" />
     </LinearLayout>
