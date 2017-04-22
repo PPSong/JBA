@@ -213,17 +213,18 @@ public class TabsActivity extends AppCompatActivity implements Drawer.OnDrawerIt
         drawerResult.addStickyFooterItem(item0);
         updateProfile();
 
-        //登录按钮监控
-        Observable<Object> signInButtonObservable = RxView.clicks(binding.createMomentBt)
+        //创建moment按钮监控
+        Observable<Object> createMomentButtonObservable = RxView.clicks(binding.createMomentBt)
                 .debounce(200, TimeUnit.MILLISECONDS);
 
-        disposableList.add(signInButtonObservable
+        disposableList.add(createMomentButtonObservable
                 .subscribeOn(AndroidSchedulers.mainThread())
                 .observeOn(Schedulers.io())
                 .subscribe(
                         new Consumer<Object>() {
                             public void accept(Object o) {
-                                Log.v("pplog", "test");
+                                Intent intent = new Intent(activityContext, CreateMomentActivity.class);
+                                startActivity(intent);
                             }
                         }
                 )

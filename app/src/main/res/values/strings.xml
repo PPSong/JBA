@@ -61,5 +61,11 @@
     <string name="sb_follow_to_me">%1$s关注了我%2$s</string>
     <string name="daily_report">今天我被%1$d人迹录了片刻, 迹录了%2$d次他人的片刻, 增加了%3$d个新粉丝</string>
     <string name="welcome">欢迎第一次来到迹伴</string>
+    <string name="say_something">说点什么吧</string>
+    <string name="publish">发布</string>
+    <string name="input_address_pls">请输入地址</string>
+    <string name="error_invalid_moment_content">内容不能超过120字</string>
+    <string name="error_invalid_place">地名不得超过70字</string>
+    <string name="moment_content_place_required">内容和地址都不能为空</string>
 
 </resources>

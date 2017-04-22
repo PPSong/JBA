@@ -18,18 +18,15 @@
         <activity
             android:name=".LoginActivity"
             android:label="@string/login"
-            android:launchMode="singleTask">
-
-
-        </activity>
+            android:launchMode="singleTask"></activity>
         <activity
             android:name=".ForgetPasswordActivity"
             android:label="@string/reset_password"
             android:parentActivityName=".LoginActivity" />
         <activity
-            android:theme="@style/AppTheme.NoActionBar"
             android:name=".TabsActivity"
-            android:label="@string/title_activity_tabs">
+            android:label="@string/title_activity_tabs"
+            android:theme="@style/AppTheme.NoActionBar">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -40,17 +37,19 @@
             android:name=".SignUp1Activity"
             android:label="@string/action_sign_up"
             android:launchMode="singleTask"
-            android:parentActivityName=".LoginActivity"></activity>
+            android:parentActivityName=".LoginActivity" />
         <activity
             android:name=".SignUp2Activity"
             android:label="@string/action_sign_up"
             android:launchMode="singleTask"
-            android:parentActivityName=".SignUp1Activity"></activity>
+            android:parentActivityName=".SignUp1Activity" />
         <activity
             android:name=".SignUp3Activity"
             android:label="@string/finish_sign_up"
             android:launchMode="singleTask"
-            android:parentActivityName=".SignUp2Activity"></activity>
+            android:parentActivityName=".SignUp2Activity" />
+        <activity android:name=".CreateMomentActivity">
+        </activity>
     </application>
 
 </manifest>

@@ -1,5 +1,7 @@
 package com.penn.jba.realm.model;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.util.Log;
 
 import com.google.gson.JsonArray;
@@ -29,7 +31,6 @@ public class FootprintMine extends RealmObject {
     private String status; //local, net, failed
     private int type;
     private String body;
-
     private RealmList<Pic> pics;
 
     public RealmList<Pic> getPics() {
@@ -125,7 +126,6 @@ public class FootprintMine extends RealmObject {
                 return String.format(sb_follow_to_me, nicknameA, beFriend);
             }
         } else if (type == 3) {
-            Log.v("pplog22", ppFromString(body, "detail.content").getAsString());
             return ppFromString(body, "detail.content").getAsString();
         }
         return "no type";
@@ -178,7 +178,7 @@ public class FootprintMine extends RealmObject {
 
     public String getPlace() {
         if (type == 3) {
-            return ppFromString(body, "detail.location.city").getAsString() + ppFromString(body, "detail.location.detail").getAsString();
+            return ppFromString(body, "detail.location.city", "string").getAsString() + ppFromString(body, "detail.location.detail").getAsString();
         } else {
             return "";
         }

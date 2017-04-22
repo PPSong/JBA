@@ -16,6 +16,7 @@ import com.google.gson.JsonPrimitive;
 import com.penn.jba.PPApplication;
 import com.penn.jba.R;
 import com.penn.jba.TabsActivity;
+import com.penn.jba.model.Geo;
 import com.penn.jba.realm.model.CurrentUser;
 import com.penn.jba.realm.model.CurrentUserSetting;
 import com.penn.jba.realm.model.Pic;
@@ -350,11 +351,13 @@ public class PPHelper {
     public static JsonElement ppFromString(String json, String path, String type) {
         JsonElement jsonElement = ppFromString(json, path);
         if (jsonElement == null) {
-            switch (type) {
+            switch (type.toLowerCase()) {
                 case "array":
                     return new JsonArray();
                 case "int":
                     return new JsonPrimitive(0);
+                case "string":
+                    return new JsonPrimitive("");
                 default:
                     return null;
             }
@@ -423,5 +426,32 @@ public class PPHelper {
             Log.v("ppLog", "Json解析错误" + e);
             return null;
         }
+    }
+
+    public static String isMomentContentValid(Context context, String string) {
+        String error = "";
+        if (TextUtils.isEmpty(string)) {
+            error = context.getString(R.string.error_field_required);
+        } else if (string.length() > 120) {
+            error = context.getString(R.string.error_invalid_moment_content);
+        }
+
+        return error;
+    }
+
+    public static String isPlaceValid(Context context, String string) {
+        String error = "";
+        if (TextUtils.isEmpty(string)) {
+            error = context.getString(R.string.error_field_required);
+        } else if (string.length() > 70) {
+            error = context.getString(R.string.error_invalid_place);
+        }
+
+        return error;
+    }
+
+    public static Geo getLatestGeo() {
+        //pptodo implement it
+        return new Geo( 121.52619934082031f, 31.216968536376953f);
     }
 }

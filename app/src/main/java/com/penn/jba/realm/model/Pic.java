@@ -1,5 +1,10 @@
 package com.penn.jba.realm.model;
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+
+import java.util.ArrayList;
+
 import io.realm.RealmObject;
 import io.realm.annotations.PrimaryKey;
 
@@ -35,5 +40,9 @@ public class Pic extends RealmObject {
 
     public void setPath(String path) {
         this.path = path;
+    }
+
+    public Bitmap getBitmap() {
+        return BitmapFactory.decodeByteArray(data, 0, data.length);
     }
 }
