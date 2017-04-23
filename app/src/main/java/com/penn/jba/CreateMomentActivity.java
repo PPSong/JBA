@@ -25,6 +25,7 @@ import com.penn.jba.realm.model.Pic;
 import com.penn.jba.util.MomentImageAdapter;
 import com.penn.jba.util.MomentImagePreviewAdapter;
 import com.penn.jba.util.PPHelper;
+import com.squareup.picasso.Picasso;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -167,11 +168,13 @@ public class CreateMomentActivity extends AppCompatActivity {
         footprintMine.setType(3);
         footprintMine.setPics(new RealmList<Pic>());
 
-        for (int i = 0; i < 9; i++) {
+        for (int i = 0; i < 2; i++) {
+
             Bitmap bmp = BitmapFactory.decodeResource(getResources(), R.drawable.profile);
             ByteArrayOutputStream stream = new ByteArrayOutputStream();
-            bmp.compress(Bitmap.CompressFormat.PNG, 100, stream);
+            bmp.compress(Bitmap.CompressFormat.JPEG, 100, stream);
             byte[] byteArray = stream.toByteArray();
+            Log.v("pplog25", "" + byteArray.length);
 
             Pic pic = new Pic();
             pic.setPath(tmpHash + "_" + i);

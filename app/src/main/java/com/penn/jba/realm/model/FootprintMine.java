@@ -166,6 +166,7 @@ public class FootprintMine extends RealmObject {
     public ArrayList<String> getImages() {
         ArrayList<String> result = new ArrayList();
         if (type == 3) {
+            Log.v("pplog26", body);
             JsonArray pics = ppFromString(body, "detail.pics").getAsJsonArray();
             for (JsonElement item : pics) {
                 result.add(item.getAsString());
@@ -174,6 +175,14 @@ public class FootprintMine extends RealmObject {
             //do nothing
         }
         return result;
+    }
+
+    public int getPicNum() {
+        if (status.equals("local")) {
+            return pics.size();
+        } else {
+            return getImages().size();
+        }
     }
 
     public String getPlace() {

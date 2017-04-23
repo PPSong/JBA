@@ -103,6 +103,7 @@ public class FootprintMineFragment extends Fragment {
 
             OrderedCollectionChangeSet.Range[] insertions = changeSet.getInsertionRanges();
             for (OrderedCollectionChangeSet.Range range : insertions) {
+                Log.v("pplog25", "insert:" + range.startIndex + "," + range.length);
                 footprintMineAdapter.notifyItemRangeInserted(range.startIndex, range.length);
             }
 
@@ -206,7 +207,7 @@ public class FootprintMineFragment extends Fragment {
 
         @Override
         public void doLoadMore() {
-            Log.v("pplog9", "doLoadMore");
+            Log.v("pplog25", "doLoadMore");
             PPJSONObject jBody = new PPJSONObject();
             jBody
                     .put("beforeThan", "" + footprintMines.last().getHash())

@@ -18,6 +18,7 @@ import com.penn.jba.databinding.ListRowMineMomentBinding;
 import com.penn.jba.realm.model.FootprintAll;
 import com.penn.jba.realm.model.FootprintMine;
 import com.penn.jba.util.MomentImageAdapter;
+import com.penn.jba.util.MomentMineImageAdapter;
 import com.penn.jba.util.PPHelper;
 import com.penn.jba.util.PPLoadAdapter;
 
@@ -94,13 +95,7 @@ public class FootprintMineAdapter extends PPLoadAdapter<FootprintMine> {
             binding.contentTv.setText(ft.getContent());
             binding.placeTv.setText(ft.getPlace());
 
-            //设置图片
-            ArrayList<String> pics = ft.getImages();
-//            ArrayList<String> pics = new ArrayList<>();
-//            for (int i = 0; i < 0; i++) {
-//                pics.add("1488363775010.01Eg703-1024x1024.jpg");
-//            }
-            int picNum = pics.size();
+            int picNum = ft.getPicNum();
             int width = 0;
             if (picNum == 0) {
                 //do nothing
@@ -123,8 +118,8 @@ public class FootprintMineAdapter extends PPLoadAdapter<FootprintMine> {
 
             final float scale = context.getResources().getDisplayMetrics().density;
             int pixels = (int) (width * scale + 0.5f);
-            MomentImageAdapter momentImageAdapter = new MomentImageAdapter(context, pics, pixels);
-            binding.mainGv.setAdapter(momentImageAdapter);
+            MomentMineImageAdapter momentMineImageAdapter = new MomentMineImageAdapter(context, ft, pixels);
+            binding.mainGv.setAdapter(momentMineImageAdapter);
         }
     }
 }
