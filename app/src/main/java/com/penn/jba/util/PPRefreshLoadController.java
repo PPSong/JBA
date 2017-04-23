@@ -89,12 +89,12 @@ public abstract class PPRefreshLoadController implements SwipeRefreshLayout.OnRe
             begin();
             final PPLoadAdapter tmp = ((PPLoadAdapter) (recyclerView.getAdapter()));
             tmp.needLoadMoreCell();
-            recyclerView.post(new Runnable() {
-                @Override
-                public void run() {
-                    tmp.notifyItemInserted(tmp.data.size());
-                }
-            });
+//            recyclerView.post(new Runnable() {
+//                @Override
+//                public void run() {
+//                    tmp.notifyItemInserted(tmp.data.size());
+//                }
+//            });
             doLoadMore();
         } else {
             //do nothing

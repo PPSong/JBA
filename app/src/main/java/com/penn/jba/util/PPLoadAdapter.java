@@ -11,10 +11,14 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.penn.jba.R;
+import com.penn.jba.realm.model.FootprintMine;
 
 import org.w3c.dom.Text;
 
 import java.util.List;
+
+import io.realm.Realm;
+import io.realm.RealmResults;
 
 /**
  * Created by penn on 14/04/2017.
@@ -22,7 +26,6 @@ import java.util.List;
 
 public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
     private final int VIEW_PROG = -1;
-    private boolean loadMoreCell = false;
 
     public List<T> data;
 
@@ -31,20 +34,29 @@ public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
     }
 
     public void needLoadMoreCell() {
-        loadMoreCell = true;
+        try (Realm realm = Realm.getDefaultInstance()) {
+            FootprintMine footprintMine = new FootprintMine();
+            footprintMine.setHash("loadMore");
+            footprintMine.setType(VIEW_PROG);
+            realm.beginTransaction();
+            final FootprintMine ft = realm.copyToRealmOrUpdate(footprintMine);
+            realm.commitTransaction();
+        }
     }
 
     public void cancelLoadMoreCell() {
-        loadMoreCell = false;
+        try (Realm realm = Realm.getDefaultInstance()) {
+            final FootprintMine ft = realm.where(FootprintMine.class).findFirst();
+
+            realm.beginTransaction();
+            ft.deleteFromRealm();
+            realm.commitTransaction();
+        }
     }
 
     @Override
     public int getItemViewType(int position) {
-        if (position < data.size()) {
-            return getRealItemViewType(data.get(position));
-        } else {
-            return VIEW_PROG;
-        }
+        return getRealItemViewType(data.get(position));
     }
 
     @Override
@@ -82,9 +94,6 @@ public abstract class PPLoadAdapter<T> extends RecyclerView.Adapter {
     @Override
     public int getItemCount() {
         int i = data == null ? 0 : data.size();
-        if (loadMoreCell) {
-            i = i + 1;
-        }
 
         return i;
     }
